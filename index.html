@@ -1,0 +1,2896 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OFDM Doppler Workbench</title>
+  <!-- KaTeX for LaTeX rendering in hover tooltips and tutorial narration -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f1e9;
+      --ink: #18201b;
+      --muted: #5f675f;
+      --line: #c7c1b4;
+      --panel: #fffefa;
+      --panel-soft: #ece8dd;
+      --accent: #0f695e;
+      --accent-ink: #ffffff;
+      --blue: #2d6cdf;
+      --gold: #c08a2d;
+      --red: #a43b36;
+      --green-soft: #dcece6;
+      --blue-soft: #dfe9fb;
+      --gold-soft: #f4ead7;
+      --red-soft: #f1dfdc;
+      --focus: #27a897;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(760px, 1fr) 400px;
+      gap: 14px;
+      min-height: 100vh;
+      padding: 14px;
+    }
+
+    button, input, select { font: inherit; }
+
+    button {
+      height: 34px;
+      min-width: 34px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #ffffff;
+      color: var(--ink);
+      cursor: pointer;
+      font-weight: 650;
+      padding: 0 10px;
+    }
+
+    button.primary,
+    button.active {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: var(--accent-ink);
+    }
+
+    button:disabled { cursor: not-allowed; opacity: 0.5; }
+
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    canvas:focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--muted);
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    select,
+    input[type="number"] {
+      height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #ffffff;
+      color: var(--ink);
+      padding: 0 8px;
+    }
+
+    input[type="range"] {
+      accent-color: var(--accent);
+      width: 100%;
+    }
+
+    .workspace,
+    .panel {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 1px 0 rgba(24, 32, 27, 0.04);
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-rows: auto auto auto minmax(0, 1fr);
+      gap: 10px;
+      padding: 10px;
+      min-height: calc(100vh - 28px);
+    }
+
+    .panel {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      min-height: calc(100vh - 28px);
+      overflow: hidden;
+    }
+
+    .toolbar, .tool-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .title {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    h1 { margin: 0; font-size: 20px; }
+    h2 { margin: 0; font-size: 13px; font-weight: 700; color: var(--ink); letter-spacing: 0.02em; }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .metric {
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 6px 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 6px;
+    }
+    .metric .label { color: var(--muted); font-size: 12px; }
+    .metric .value { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+    .views {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 10px;
+      min-height: 0;
+    }
+    .view {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      overflow: hidden;
+      position: relative;
+    }
+    .view-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      padding: 8px 10px 4px;
+      gap: 8px;
+    }
+    .view-head h2 { font-size: 13px; }
+    .view-head span { color: var(--muted); font-size: 12px; }
+    .view canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    canvas.orbit { cursor: grab; }
+    canvas.orbit.dragging { cursor: grabbing; }
+    .hint {
+      position: absolute;
+      bottom: 6px;
+      right: 8px;
+      font-size: 10.5px;
+      color: var(--muted);
+      pointer-events: none;
+      background: rgba(255,254,250,0.78);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .tour-body {
+      color: var(--muted);
+      display: grid;
+      gap: 6px;
+    }
+    .tour-body p { margin: 0; }
+    .tour-body strong { color: var(--ink); }
+    .tour-eq {
+      display: inline-block;
+      margin-top: 2px;
+      padding: 2px 6px;
+      border: 1px solid rgba(15,105,94,0.25);
+      border-radius: 5px;
+      background: rgba(255,255,255,0.55);
+      color: var(--accent);
+      font-weight: 750;
+    }
+
+    .side-head {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel-soft);
+    }
+
+    .side-body {
+      padding: 12px;
+      overflow-y: auto;
+      display: grid;
+      gap: 12px;
+    }
+
+    .control-section {
+      display: grid;
+      gap: 9px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+    .control-section:last-child { border-bottom: 0; padding-bottom: 0; }
+
+    .control-grid { display: grid; gap: 8px; }
+    .control {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+    }
+    .control label { grid-column: 1 / -1; justify-content: space-between; }
+    .control output {
+      color: var(--ink);
+      font-weight: 700;
+      min-width: 56px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    .control input[type="range"] { grid-column: 1 / -1; }
+
+    .readout {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-soft);
+      padding: 9px;
+      color: var(--ink);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .swatch { display: inline-flex; align-items: center; gap: 5px; }
+    .swatch::before {
+      content: "";
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      border: 1px solid rgba(24, 32, 27, 0.25);
+      background: var(--c);
+    }
+
+    @media (max-width: 1180px) {
+      main { grid-template-columns: 1fr; }
+      .panel { min-height: auto; }
+    }
+
+    @media (max-width: 760px) {
+      main { padding: 8px; }
+      .views { grid-template-columns: 1fr; grid-template-rows: repeat(4, 320px); }
+    }
+
+    /* ---------- hover tooltip ---------- */
+    .mathtip {
+      position: fixed;
+      z-index: 100;
+      max-width: 360px;
+      padding: 9px 11px;
+      border: 1px solid var(--accent);
+      background: #fffdf4;
+      border-radius: 7px;
+      box-shadow: 0 6px 18px rgba(24,32,27,0.18);
+      color: var(--ink);
+      font-size: 12px;
+      line-height: 1.4;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.12s ease;
+    }
+    .mathtip.show { opacity: 1; }
+    .mathtip .ttl {
+      font-weight: 750;
+      color: var(--accent);
+      margin-bottom: 3px;
+      font-size: 12.5px;
+    }
+    .mathtip .eq {
+      display: block;
+      margin: 4px 0;
+      padding: 4px 8px;
+      border-left: 3px solid var(--accent);
+      background: #f5efdf;
+      font-size: 13px;
+      overflow-x: auto;
+    }
+    .mathtip .eq .katex { font-size: 1.0em; }
+    .mathtip .ieq { /* inline equation */
+      padding: 0 3px;
+    }
+    .mathtip .num {
+      display: inline-block;
+      padding: 1px 5px;
+      border-radius: 3px;
+      background: rgba(15,105,94,0.10);
+      color: var(--accent);
+      font-weight: 750;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ---------- tutorial modal ---------- */
+    .tut-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(24,32,27,0.55);
+      z-index: 90;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .tut-overlay.show { display: flex; }
+    .tut-window {
+      width: min(1100px, 100%);
+      height: min(720px, 92vh);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    }
+    .tut-head {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--panel-soft);
+    }
+    .tut-head h2 {
+      font-size: 16px;
+      font-weight: 750;
+    }
+    .tut-head .crumb {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .tut-body {
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      gap: 8px;
+      padding: 10px 14px;
+      min-height: 0;
+    }
+    .tut-canvas-wrap {
+      position: relative;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fffefa;
+      overflow: hidden;
+    }
+
+    /* LaTeX overlay layer sits above the tutorial canvas */
+    .tut-overlays {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    .tut-overlays .eq-card {
+      position: absolute;
+      background: rgba(255, 253, 244, 0.94);
+      border: 1px solid rgba(15, 105, 94, 0.45);
+      border-radius: 6px;
+      padding: 6px 12px;
+      color: var(--ink);
+      font-size: 14px;
+      line-height: 1.2;
+      box-shadow: 0 2px 8px rgba(24, 32, 27, 0.06);
+      max-width: calc(100% - 36px);
+      white-space: normal;
+      text-align: center;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+    .tut-overlays .eq-card.subtle {
+      background: rgba(255, 253, 244, 0.85);
+      border-color: rgba(95, 103, 95, 0.30);
+      padding: 4px 8px;
+      font-size: 12.5px;
+    }
+    .tut-overlays .eq-card.banner {
+      background: rgba(255, 253, 244, 0.97);
+      border-color: rgba(15, 105, 94, 0.55);
+      padding: 8px 14px;
+      font-size: 14px;
+    }
+    .tut-overlays .eq-top    { top: 8px;    left: 50%; transform: translateX(-50%); }
+    .tut-overlays .eq-bottom { bottom: 10px; left: 50%; transform: translateX(-50%); }
+    .tut-overlays .eq-tl     { top: 8px;    left: 10px; }
+    .tut-overlays .eq-tr     { top: 8px;    right: 10px; }
+    .tut-overlays .eq-bl     { bottom: 10px; left: 10px; }
+    .tut-overlays .eq-br     { bottom: 10px; right: 10px; }
+    .tut-overlays .eq-card .katex { color: var(--ink); max-width: 100%; }
+    .tut-overlays .eq-card .katex-display {
+      margin: 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+    #tutCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .tut-narration {
+      background: #fbf6e9;
+      border: 1px solid rgba(15,105,94,0.30);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 13px;
+      line-height: 1.45;
+      color: var(--ink);
+      min-height: 78px;
+      overflow-wrap: anywhere;
+    }
+    .tut-narration strong { color: var(--accent); }
+    .tut-narration .eq {
+      display: inline-block;
+      margin: 4px 6px 4px 0;
+      padding: 3px 8px;
+      border-radius: 5px;
+      background: #fff;
+      border: 1px solid rgba(15,105,94,0.30);
+      font-size: 13px;
+      color: var(--accent);
+    }
+    .tut-narration .eq .katex { font-size: 1em; color: var(--accent); }
+    .tut-narration .katex-display {
+      margin: 0.25em 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+    .tut-foot {
+      padding: 10px 14px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: var(--panel-soft);
+    }
+    .tut-step-dots {
+      display: flex;
+      gap: 6px;
+    }
+    .tut-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--line);
+      transition: background 0.15s;
+    }
+    .tut-dot.on { background: var(--accent); }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="workspace" aria-label="OFDM Doppler simulation">
+      <div class="title">
+        <h1>OFDM Doppler Workbench</h1>
+        <div class="toolbar">
+          <div class="tool-group" aria-label="Playback controls">
+            <button id="playBtn" title="Animate time marker">▶</button>
+            <button id="stepBtn" title="Step carriers and data">↻</button>
+          </div>
+          <select id="presetSelect" title="Preset scenario">
+            <option value="clean">Clean OFDM</option>
+            <option value="cfo">Common frequency offset</option>
+            <option value="wideband" selected>Wideband Doppler</option>
+            <option value="strong">Strong ICI</option>
+          </select>
+          <button id="tourBtn" class="primary" title="Walk through the Doppler story">▷ Guided tour</button>
+          <button id="tutBtn" title="Step-by-step OFDM tutorial: bits → tones → FFT">📚 OFDM tutorial</button>
+        </div>
+      </div>
+
+      <div id="tourBanner" style="display:none; border:1px solid var(--accent); background:#e9f4f1; border-radius:8px; padding:10px 12px; font-size:13px; line-height:1.45; color:var(--ink);">
+        <div style="display:flex; align-items:flex-start; gap:10px;">
+          <div id="tourStepNum" style="min-width:32px; height:32px; border-radius:50%; background:var(--accent); color:#fff; font-weight:750; display:flex; align-items:center; justify-content:center;">1</div>
+          <div style="flex:1; min-width:0;">
+            <div id="tourTitle" style="font-weight:750; margin-bottom:3px;">Step title</div>
+            <div id="tourBody" class="tour-body">Step body</div>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button id="tourPrev" title="Previous step">‹</button>
+            <button id="tourNext" class="primary" title="Next step">Next ›</button>
+            <button id="tourClose" title="Close tour">✕</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="metrics" aria-label="Live OFDM metrics">
+        <div class="metric">
+          <span class="label">Average ICI / diagonal</span>
+          <span class="value" id="avgIciMetric">-∞ dB</span>
+        </div>
+        <div class="metric">
+          <span class="label">Selected-bin ICI</span>
+          <span class="value" id="selectedIciMetric">-∞ dB</span>
+        </div>
+        <div class="metric">
+          <span class="label">One-tap EVM</span>
+          <span class="value" id="evmMetric">0.0%</span>
+        </div>
+      </div>
+
+      <div class="views">
+        <section class="view">
+          <div class="view-head">
+            <h2>1. Phasor view</h2>
+            <span>does the neighbour loop close?</span>
+          </div>
+          <canvas id="phasorCanvas" tabindex="0"></canvas>
+        </section>
+
+        <section class="view">
+          <div class="view-head">
+            <h2>2. ICI matrix — 3D landscape</h2>
+            <span>diagonal ridge = clean, side bands = Doppler</span>
+          </div>
+          <canvas id="matrixCanvas" class="orbit" tabindex="0"></canvas>
+          <div class="hint">drag to orbit · wheel to zoom</div>
+        </section>
+
+        <section class="view">
+          <div class="view-head">
+            <h2>3. Spectrum view</h2>
+            <span>each carrier as a sinc — does it land on the FFT grid?</span>
+          </div>
+          <canvas id="spectrumCanvas" tabindex="0"></canvas>
+        </section>
+
+        <section class="view">
+          <div class="view-head">
+            <h2>4. Constellation</h2>
+            <span>raw FFT vs one-tap equalised</span>
+          </div>
+          <canvas id="constellationCanvas" tabindex="0"></canvas>
+        </section>
+      </div>
+    </section>
+
+    <aside class="panel" aria-label="Simulation controls">
+      <div class="side-head">
+        <div class="tool-row">
+          <strong>Controls</strong>
+          <span id="statusText" style="color: var(--muted); font-size: 12px;">wideband Doppler</span>
+        </div>
+      </div>
+      <div class="side-body">
+        <section class="control-section">
+          <h2>Signal</h2>
+          <div class="control-grid">
+            <div class="control">
+              <label for="subcarrierRange">Subcarriers <output id="subcarrierOut">32</output></label>
+              <input id="subcarrierRange" type="range" min="2" max="96" step="2" value="32">
+            </div>
+            <div class="control">
+              <label for="binRange">Selected bin k <output id="binOut">0</output></label>
+              <input id="binRange" type="range" min="0" max="31" step="1" value="20">
+            </div>
+            <div class="control">
+              <label for="snrRange">SNR <output id="snrOut">32 dB</output></label>
+              <input id="snrRange" type="range" min="6" max="50" step="1" value="32">
+            </div>
+          </div>
+        </section>
+
+        <section class="control-section">
+          <h2>Doppler and offset</h2>
+          <div class="control-grid">
+            <div class="control">
+              <label for="cfoRange">Common frequency offset <output id="cfoOut">0.20 bins</output></label>
+              <input id="cfoRange" type="range" min="-0.60" max="0.60" step="0.01" value="0.20">
+            </div>
+            <div class="control">
+              <label for="scaleRange">Wideband scale <output id="scaleOut">0.70%</output></label>
+              <input id="scaleRange" type="range" min="-2.00" max="2.00" step="0.05" value="0.70">
+            </div>
+          </div>
+        </section>
+
+        <section class="control-section">
+          <h2>What to notice</h2>
+          <div class="readout" id="insightBox">
+            Doppler changes relative spin rates, so neighbour loops do not close.
+          </div>
+          <div class="legend">
+            <span class="swatch" style="--c: var(--accent);">desired</span>
+            <span class="swatch" style="--c: var(--gold);">neighbour</span>
+            <span class="swatch" style="--c: var(--red);">Doppler</span>
+            <span class="swatch" style="--c: var(--blue);">FFT bin</span>
+          </div>
+        </section>
+
+        <section class="control-section">
+          <h2>How to read each view</h2>
+          <p style="margin:0;font-size:12.5px;line-height:1.45;color:var(--muted);">
+            <strong style="color:var(--ink);">Phasor:</strong> the FFT bin is a backward-spinning reference. A carrier only appears still when its spin exactly matches bin k. Any leftover spin traces a circle.<br>
+            <strong style="color:var(--ink);">3D matrix:</strong> tall accent bars on the diagonal mean clean OFDM. Gold/red side bars are ICI. Drag the canvas to orbit.<br>
+            <strong style="color:var(--ink);">Spectrum:</strong> each curve is one carrier's sinc; dashed blue lines are FFT-bin centres. Clean OFDM places samples on every other carrier's zeros.<br>
+            <strong style="color:var(--ink);">Constellation:</strong> raw vs equalised. Red error vectors point from received to ideal QPSK target.
+          </p>
+        </section>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Floating math tooltip -->
+  <div id="mathtip" class="mathtip" role="tooltip"></div>
+
+  <!-- OFDM tutorial overlay -->
+  <div id="tutOverlay" class="tut-overlay" role="dialog" aria-label="OFDM tutorial">
+    <div class="tut-window">
+      <div class="tut-head">
+        <div>
+          <h2 id="tutTitle">OFDM tutorial</h2>
+          <div class="crumb" id="tutCrumb">Step 1 of 6</div>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <span style="color:var(--muted);font-size:12px;">N = 8 tones</span>
+          <button id="tutShuffle" title="New random bits">↻ bits</button>
+          <button id="tutClose" title="Close tutorial">✕</button>
+        </div>
+      </div>
+      <div class="tut-body">
+        <div class="tut-canvas-wrap">
+          <canvas id="tutCanvas"></canvas>
+          <div id="tutOverlays" class="tut-overlays"></div>
+        </div>
+        <div class="tut-narration" id="tutNarration">Narration goes here</div>
+      </div>
+      <div class="tut-foot">
+        <button id="tutPrev">‹ Prev</button>
+        <div class="tut-step-dots" id="tutDots"></div>
+        <button id="tutNext" class="primary">Next ›</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* =============================================================
+       OFDM Doppler Workbench. Self-contained; no external deps.
+       Simulation core: analytical ICI coupling matrix C from CFO +
+       wideband scale; QPSK symbols pushed through C.
+       Rendering: 2D Canvas for phasor / spectrum / constellation;
+       hand-rolled 3D projection (yaw / pitch / perspective) for the
+       ICI matrix landscape, with painter's-algorithm bar sort.
+       ============================================================= */
+    const TAU = Math.PI * 2;
+    const els = {
+      playBtn: document.getElementById('playBtn'),
+      stepBtn: document.getElementById('stepBtn'),
+      presetSelect: document.getElementById('presetSelect'),
+      subcarrierRange: document.getElementById('subcarrierRange'),
+      binRange: document.getElementById('binRange'),
+      snrRange: document.getElementById('snrRange'),
+      cfoRange: document.getElementById('cfoRange'),
+      scaleRange: document.getElementById('scaleRange'),
+      subcarrierOut: document.getElementById('subcarrierOut'),
+      binOut: document.getElementById('binOut'),
+      snrOut: document.getElementById('snrOut'),
+      cfoOut: document.getElementById('cfoOut'),
+      scaleOut: document.getElementById('scaleOut'),
+      statusText: document.getElementById('statusText'),
+      insightBox: document.getElementById('insightBox'),
+      avgIciMetric: document.getElementById('avgIciMetric'),
+      selectedIciMetric: document.getElementById('selectedIciMetric'),
+      evmMetric: document.getElementById('evmMetric'),
+      phasorCanvas: document.getElementById('phasorCanvas'),
+      matrixCanvas: document.getElementById('matrixCanvas'),
+      spectrumCanvas: document.getElementById('spectrumCanvas'),
+      constellationCanvas: document.getElementById('constellationCanvas'),
+      tourBtn: document.getElementById('tourBtn'),
+      tourBanner: document.getElementById('tourBanner'),
+      tourStepNum: document.getElementById('tourStepNum'),
+      tourTitle: document.getElementById('tourTitle'),
+      tourBody: document.getElementById('tourBody'),
+      tourPrev: document.getElementById('tourPrev'),
+      tourNext: document.getElementById('tourNext'),
+      tourClose: document.getElementById('tourClose'),
+      mathtip: document.getElementById('mathtip'),
+      tutBtn: document.getElementById('tutBtn'),
+      tutOverlay: document.getElementById('tutOverlay'),
+      tutTitle: document.getElementById('tutTitle'),
+      tutCrumb: document.getElementById('tutCrumb'),
+      tutCanvas: document.getElementById('tutCanvas'),
+      tutNarration: document.getElementById('tutNarration'),
+      tutPrev: document.getElementById('tutPrev'),
+      tutNext: document.getElementById('tutNext'),
+      tutClose: document.getElementById('tutClose'),
+      tutShuffle: document.getElementById('tutShuffle'),
+      tutDots: document.getElementById('tutDots'),
+      tutOverlays: document.getElementById('tutOverlays')
+    };
+
+    const state = {
+      N: 32,
+      binIndex: 20,
+      snrDb: 32,
+      phaseDeg: 0,
+      cfo: 0.20,
+      scalePct: 0.70,
+      seed: 7,
+      animating: false,
+      time: 0,
+      matrixView: { yaw: -0.55, pitch: 0.85, scale: 1.0, distance: 6.5 }
+    };
+
+    const colors = {
+      ink: '#18201b',
+      muted: '#5f675f',
+      line: '#c7c1b4',
+      panel: '#fffefa',
+      panelSoft: '#ece8dd',
+      accent: '#0f695e',
+      blue: '#2d6cdf',
+      gold: '#c08a2d',
+      red: '#a43b36'
+    };
+
+    /* ---------- complex math ---------- */
+    function complex(re, im) { return { re, im }; }
+    function add(a, b) { return complex(a.re + b.re, a.im + b.im); }
+    function sub(a, b) { return complex(a.re - b.re, a.im - b.im); }
+    function mul(a, b) { return complex(a.re * b.re - a.im * b.im, a.re * b.im + a.im * b.re); }
+    function scaleC(a, s) { return complex(a.re * s, a.im * s); }
+    function abs2(a) { return a.re * a.re + a.im * a.im; }
+    function absC(a) { return Math.sqrt(abs2(a)); }
+    function divC(a, b) {
+      const d = Math.max(abs2(b), 1e-18);
+      return complex((a.re * b.re + a.im * b.im) / d, (a.im * b.re - a.re * b.im) / d);
+    }
+    function cis(theta) { return complex(Math.cos(theta), Math.sin(theta)); }
+
+    function carrierList() {
+      const half = Math.floor(state.N / 2);
+      return Array.from({ length: state.N }, (_, i) => i - half);
+    }
+    function selectedCarrier() {
+      return carrierList()[state.binIndex] || 0;
+    }
+    function arrivalFrequency(carrier) {
+      return carrier * (1 + state.scalePct / 100) + state.cfo;
+    }
+    function phaseFactor() {
+      return cis(state.phaseDeg * Math.PI / 180);
+    }
+    function segmentCoeff(delta, a, b) {
+      if (Math.abs(delta) < 1e-10) return complex(b - a, 0);
+      const A = TAU * delta;
+      const eb = cis(A * b);
+      const ea = cis(A * a);
+      const diff = sub(eb, ea);
+      return complex(diff.im / A, -diff.re / A);
+    }
+    function fullCoeff(rxCarrier, txCarrier) {
+      const delta = arrivalFrequency(txCarrier) - rxCarrier;
+      return mul(phaseFactor(), segmentCoeff(delta, 0, 1));
+    }
+
+    function lcg(seed) {
+      let s = seed >>> 0;
+      return function rand() {
+        s = (1664525 * s + 1013904223) >>> 0;
+        return s / 4294967296;
+      };
+    }
+    function qpskSymbols(N, seed) {
+      const rand = lcg(seed);
+      const inv = 1 / Math.sqrt(2);
+      return Array.from({ length: N }, () => {
+        const a = rand() > 0.5 ? 1 : -1;
+        const b = rand() > 0.5 ? 1 : -1;
+        return complex(a * inv, b * inv);
+      });
+    }
+    function randn(rand) {
+      const u1 = Math.max(rand(), 1e-12);
+      const u2 = rand();
+      return Math.sqrt(-2 * Math.log(u1)) * Math.cos(TAU * u2);
+    }
+
+    function buildCoupling() {
+      const c = carrierList();
+      return c.map(rx => c.map(tx => fullCoeff(rx, tx)));
+    }
+    function simulate() {
+      const c = carrierList();
+      const C = buildCoupling();
+      const d = qpskSymbols(state.N, state.seed);
+      const rand = lcg(state.seed + 101);
+      const noiseVar = Math.pow(10, -state.snrDb / 10);
+      const y = []; const eq = []; const raw = [];
+
+      for (let r = 0; r < state.N; r++) {
+        let acc = complex(0, 0);
+        for (let l = 0; l < state.N; l++) acc = add(acc, mul(C[r][l], d[l]));
+        const sigma = Math.sqrt(noiseVar / 2);
+        acc = add(acc, complex(sigma * randn(rand), sigma * randn(rand)));
+        y.push(acc);
+        const diag = C[r][r];
+        eq.push(divC(acc, abs2(diag) > 1e-12 ? diag : complex(1, 0)));
+        const diagMag = Math.max(absC(diag), 1e-6);
+        raw.push(scaleC(acc, 1 / diagMag));
+      }
+      return { carriers: c, C, d, y, eq, raw };
+    }
+
+    function db(x) {
+      if (!isFinite(x) || x <= 1e-14) return '-∞ dB';
+      return (10 * Math.log10(x)).toFixed(1) + ' dB';
+    }
+    function pct(x) { return (100 * x).toFixed(x < 0.1 ? 1 : 0) + '%'; }
+
+    /* ---------- canvas helpers ---------- */
+    function prepareCanvas(canvas) {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const w = Math.max(280, Math.round(rect.width * dpr));
+      const h = Math.max(200, Math.round(rect.height * dpr));
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, rect.width, rect.height);
+      return { ctx, w: rect.width, h: rect.height };
+    }
+    function text(ctx, s, x, y, opts = {}) {
+      ctx.save();
+      ctx.fillStyle = opts.color || colors.ink;
+      ctx.font = `${opts.weight || 500} ${opts.size || 12}px ui-sans-serif, system-ui, sans-serif`;
+      ctx.textAlign = opts.align || 'left';
+      ctx.textBaseline = opts.baseline || 'alphabetic';
+      ctx.fillText(s, x, y);
+      ctx.restore();
+    }
+    function line(ctx, x1, y1, x2, y2, color, width, dash) {
+      color = color || colors.ink; width = width || 1;
+      ctx.save();
+      ctx.strokeStyle = color; ctx.lineWidth = width;
+      if (dash) ctx.setLineDash(dash);
+      ctx.beginPath();
+      ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.restore();
+    }
+    function arrow(ctx, x1, y1, x2, y2, color, width) {
+      color = color || colors.ink; width = width || 1;
+      line(ctx, x1, y1, x2, y2, color, width);
+      const a = Math.atan2(y2 - y1, x2 - x1);
+      ctx.save();
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(x2, y2);
+      ctx.lineTo(x2 - 7 * Math.cos(a - 0.45), y2 - 7 * Math.sin(a - 0.45));
+      ctx.lineTo(x2 - 7 * Math.cos(a + 0.45), y2 - 7 * Math.sin(a + 0.45));
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    /* =========================================================
+       VIEW 1 — Phasor (bin-k relative rotation)
+       Three small circles: desired k and neighbours k±1. Path
+       traced is what each carrier looks like inside bin k. The
+       desired should be still, neighbours should close into a
+       loop. Doppler leaves a non-zero residual arrow (the ICI
+       coefficient).
+       ========================================================= */
+    function drawUnitAxes(ctx, cx, cy, r) {
+      line(ctx, cx - r - 12, cy, cx + r + 12, cy, colors.muted, 1);
+      line(ctx, cx, cy + r + 12, cx, cy - r - 12, colors.muted, 1);
+      ctx.save();
+      ctx.strokeStyle = colors.line;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, TAU);
+      ctx.stroke();
+      ctx.restore();
+    }
+    function drawRelativePath(ctx, rx, tx, cx, cy, r, color, label, tMarker, role) {
+      const delta = arrivalFrequency(tx) - rx;
+      const phi = state.phaseDeg * Math.PI / 180;
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      for (let i = 0; i <= 220; i++) {
+        const t = i / 220;
+        const a = phi + TAU * delta * t;
+        const x = cx + r * Math.cos(a);
+        const y = cy - r * Math.sin(a);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.restore();
+
+      const aStart = phi;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(cx + r * Math.cos(aStart), cy - r * Math.sin(aStart), 4, 0, TAU);
+      ctx.fill();
+      const aEnd = phi + TAU * delta;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx + r * Math.cos(aEnd), cy - r * Math.sin(aEnd), 5, 0, TAU);
+      ctx.stroke();
+      const aMark = phi + TAU * delta * tMarker;
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.55;
+      ctx.beginPath();
+      ctx.arc(cx + r * Math.cos(aMark), cy - r * Math.sin(aMark), 4, 0, TAU);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      const coeff = fullCoeff(rx, tx);
+      const mag = absC(coeff);
+      const aw = mag > 0.012 ? 2.6 : 1.2;
+      arrow(ctx, cx, cy, cx + coeff.re * r * 1.5, cy - coeff.im * r * 1.5, color, aw);
+
+      const isDesired = (role === 'desired');
+      const closes = mag < 0.012;
+      const badge = isDesired
+        ? '✓ desired symbol'
+        : (closes ? '✓ closes → 0' : '✘ residual → ICI');
+      const badgeColor = isDesired ? colors.accent : (closes ? colors.accent : colors.red);
+      const labelY = cy + r + 28;
+      text(ctx, label, cx, labelY, { align: 'center', size: 13, color, weight: 750 });
+      text(ctx, `leftover spin = ${delta.toFixed(2)} turns`, cx, labelY + 16, { align: 'center', size: 11, color: colors.muted });
+      text(ctx, badge, cx, labelY + 33, { align: 'center', size: 11, color: badgeColor, weight: 700 });
+      text(ctx, `|c| = ${mag.toFixed(3)}`, cx, labelY + 49, { align: 'center', size: 11, color: colors.muted });
+    }
+    function drawPhasor() {
+      const { ctx, w, h } = prepareCanvas(els.phasorCanvas);
+      const rx = selectedCarrier();
+      const panelW = w / 3;
+      const headerH = 42;
+      const cy = headerH + (h - headerH) * 0.38;
+      const r = Math.min(panelW * 0.34, (h - headerH) * 0.28);
+      ctx.fillStyle = colors.panel;
+      ctx.fillRect(0, 0, w, h);
+      text(ctx, `bin k = ${rx} is a backward-spinning reference`, 12, 18, { color: colors.ink, size: 12.5, weight: 750 });
+      text(ctx, `carrier spin minus bin spin is the leftover spin below`, 12, 34, { color: colors.muted, size: 11.5 });
+      const entries = [
+        { tx: rx - 1, color: colors.red,    label: `carrier k−1`, role: 'neighbour' },
+        { tx: rx,     color: colors.accent, label: `carrier k (desired)`, role: 'desired' },
+        { tx: rx + 1, color: colors.gold,   label: `carrier k+1`, role: 'neighbour' }
+      ];
+      entries.forEach((entry, i) => {
+        const cx = panelW * (i + 0.5);
+        drawUnitAxes(ctx, cx, cy, r);
+        drawRelativePath(ctx, rx, entry.tx, cx, cy, r, entry.color, entry.label, state.time, entry.role);
+      });
+    }
+
+    /* =========================================================
+       VIEW 2 — 3D ICI matrix (bar landscape)
+       Manual yaw/pitch/perspective projection. Bars are drawn
+       back-to-front (depth-sorted by camera direction). Face
+       shading: top brightest, sides darker. A right-side
+       row-equation strip lists the dominant entries of row k.
+       Drag inside canvas to orbit; mouse wheel zooms.
+       ========================================================= */
+    function project3D(x, y, z, view, w, h, cx, cy) {
+      const cyR = Math.cos(view.yaw), syR = Math.sin(view.yaw);
+      const cpR = Math.cos(view.pitch), spR = Math.sin(view.pitch);
+      const x1 = cyR * x + syR * z;
+      const z1 = -syR * x + cyR * z;
+      const y1 = y;
+      const y2 = cpR * y1 - spR * z1;
+      const z2 = spR * y1 + cpR * z1;
+      const camZ = view.distance;
+      const f = camZ / (camZ + z2);
+      const focal = Math.min(w, h) * 0.55 * view.scale;
+      return {
+        sx: (cx !== undefined ? cx : w * 0.5) + x1 * f * focal,
+        sy: (cy !== undefined ? cy : h * 0.55) - y2 * f * focal,
+        depth: z2
+      };
+    }
+    function drawBar3D(ctx, x, z, height, cellHalf, color, view, w, h, cx, cy) {
+      const xL = x - cellHalf, xR = x + cellHalf;
+      const zL = z - cellHalf, zR = z + cellHalf;
+      const verts = [
+        [xL, 0, zL], [xR, 0, zL], [xR, 0, zR], [xL, 0, zR],
+        [xL, height, zL], [xR, height, zL], [xR, height, zR], [xL, height, zR]
+      ];
+      const p = verts.map(v => project3D(v[0], v[1], v[2], view, w, h, cx, cy));
+      const cameraDir = { x: -Math.sin(view.yaw), z: -Math.cos(view.yaw) };
+      const faces = [];
+      // sides facing camera
+      if (cameraDir.z < 0) faces.push({ idx: [0, 1, 5, 4], shade: 0.78 }); // front
+      else                 faces.push({ idx: [3, 2, 6, 7], shade: 0.78 }); // back
+      if (cameraDir.x < 0) faces.push({ idx: [0, 3, 7, 4], shade: 0.62 }); // left
+      else                 faces.push({ idx: [1, 2, 6, 5], shade: 0.62 }); // right
+      // top always last
+      faces.push({ idx: [4, 5, 6, 7], shade: 1.00 });
+
+      for (const face of faces) {
+        const r = Math.round(parseInt(color.slice(1, 3), 16) * face.shade);
+        const g = Math.round(parseInt(color.slice(3, 5), 16) * face.shade);
+        const b = Math.round(parseInt(color.slice(5, 7), 16) * face.shade);
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.strokeStyle = `rgba(0,0,0,0.22)`;
+        ctx.lineWidth = 0.45;
+        ctx.beginPath();
+        for (let i = 0; i < face.idx.length; i++) {
+          const v = p[face.idx[i]];
+          if (i === 0) ctx.moveTo(v.sx, v.sy);
+          else ctx.lineTo(v.sx, v.sy);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
+    function drawMatrix(sim) {
+      const { ctx, w, h } = prepareCanvas(els.matrixCanvas);
+      ctx.fillStyle = colors.panel;
+      ctx.fillRect(0, 0, w, h);
+
+      const N = state.N;
+      const view = state.matrixView;
+
+      // right-side strip for row-equation card
+      const stripW = Math.min(150, Math.max(105, w * 0.28));
+      const sceneW = Math.max(160, w - stripW - 16);
+      const sceneCx = sceneW * 0.5;
+      const sceneCy = h * 0.56;
+
+      // header
+      text(ctx, '|C[r,ℓ]| landscape: diagonal = clean, side bands = ICI',
+           12, 18, { color: colors.ink, size: 12.5, weight: 650 });
+
+      let maxV = 1e-6;
+      for (let r = 0; r < N; r++)
+        for (let l = 0; l < N; l++)
+          maxV = Math.max(maxV, absC(sim.C[r][l]));
+
+      const half = (N - 1) / 2;
+      const unit = 1.0 / half;
+      const cellHalf = unit * 0.44;
+
+      // baseplate
+      const corners = [[-1, 0, -1], [1, 0, -1], [1, 0, 1], [-1, 0, 1]]
+        .map(v => project3D(v[0], v[1], v[2], view, sceneW, h, sceneCx, sceneCy));
+      ctx.save();
+      ctx.fillStyle = colors.panelSoft;
+      ctx.strokeStyle = colors.line;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      corners.forEach((p, i) => i === 0 ? ctx.moveTo(p.sx, p.sy) : ctx.lineTo(p.sx, p.sy));
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+
+      // baseplate grid lines every 4 cells
+      ctx.save();
+      ctx.strokeStyle = 'rgba(95,103,95,0.18)';
+      ctx.lineWidth = 0.6;
+      for (let i = 0; i < N; i += 4) {
+        const t = (i - half) * unit;
+        const a1 = project3D(t, 0, -1, view, sceneW, h, sceneCx, sceneCy);
+        const a2 = project3D(t, 0, 1, view, sceneW, h, sceneCx, sceneCy);
+        ctx.beginPath(); ctx.moveTo(a1.sx, a1.sy); ctx.lineTo(a2.sx, a2.sy); ctx.stroke();
+        const b1 = project3D(-1, 0, t, view, sceneW, h, sceneCx, sceneCy);
+        const b2 = project3D(1, 0, t, view, sceneW, h, sceneCx, sceneCy);
+        ctx.beginPath(); ctx.moveTo(b1.sx, b1.sy); ctx.lineTo(b2.sx, b2.sy); ctx.stroke();
+      }
+      ctx.restore();
+
+      // diagonal hint ribbon on baseplate
+      ctx.save();
+      ctx.strokeStyle = 'rgba(15,105,94,0.45)';
+      ctx.lineWidth = 1.4;
+      const dStart = project3D(-1, 0.005, -1, view, sceneW, h, sceneCx, sceneCy);
+      const dEnd   = project3D(1,  0.005,  1, view, sceneW, h, sceneCx, sceneCy);
+      ctx.beginPath();
+      ctx.moveTo(dStart.sx, dStart.sy);
+      ctx.lineTo(dEnd.sx, dEnd.sy);
+      ctx.stroke();
+      ctx.restore();
+
+      // sort cells back-to-front
+      const cells = [];
+      for (let r = 0; r < N; r++) {
+        for (let l = 0; l < N; l++) {
+          const xWorld = (l - half) * unit;
+          const zWorld = (r - half) * unit;
+          const dx = -Math.sin(view.yaw);
+          const dz = -Math.cos(view.yaw);
+          const depth = xWorld * dx + zWorld * dz;
+          cells.push({ r, l, xWorld, zWorld, depth });
+        }
+      }
+      cells.sort((a, b) => a.depth - b.depth);
+
+      // bars
+      const sel = state.binIndex;
+      const heightScale = 1.15;
+      for (const cell of cells) {
+        const v = absC(sim.C[cell.r][cell.l]) / maxV;
+        if (v < 0.005) continue;
+        const height = v * heightScale;
+        let col;
+        if (cell.r === cell.l) col = colors.accent;
+        else if (Math.abs(cell.r - cell.l) === 1) col = colors.gold;
+        else if (Math.abs(cell.r - cell.l) === 2) col = colors.red;
+        else col = '#a89e89';
+        drawBar3D(ctx, cell.xWorld, cell.zWorld, height, cellHalf, col, view, sceneW, h, sceneCx, sceneCy);
+      }
+
+      // selected-row outline on baseplate
+      ctx.save();
+      const zRow = (sel - half) * unit;
+      const rowCorners = [
+        [-1, 0.003, zRow - unit * 0.5],
+        [1, 0.003, zRow - unit * 0.5],
+        [1, 0.003, zRow + unit * 0.5],
+        [-1, 0.003, zRow + unit * 0.5]
+      ].map(v => project3D(v[0], v[1], v[2], view, sceneW, h, sceneCx, sceneCy));
+      ctx.strokeStyle = colors.accent;
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      rowCorners.forEach((p, i) => i === 0 ? ctx.moveTo(p.sx, p.sy) : ctx.lineTo(p.sx, p.sy));
+      ctx.closePath();
+      ctx.stroke();
+      ctx.restore();
+
+      // axis labels (projected)
+      const lblX = project3D(0, -0.10, 1.20, view, sceneW, h, sceneCx, sceneCy);
+      text(ctx, 'transmitted ℓ', lblX.sx, lblX.sy, { align: 'center', size: 11, color: colors.muted });
+      const lblZ = project3D(-1.20, -0.10, 0, view, sceneW, h, sceneCx, sceneCy);
+      text(ctx, 'received r', lblZ.sx, lblZ.sy, { align: 'center', size: 11, color: colors.muted });
+
+      // ---------- right-side row-equation strip (kept from prior design) ----------
+      const carriers = sim.carriers;
+      const selCarrier = carriers[sel];
+      const stripX = w - stripW - 6;
+      const stripY = 28;
+      const stripH = h - stripY - 8;
+      ctx.save();
+      ctx.fillStyle = '#fbf6e9';
+      ctx.strokeStyle = colors.line;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      const rr = 8;
+      const sx = stripX, sy = stripY, sw = stripW, sh = stripH;
+      ctx.moveTo(sx + rr, sy);
+      ctx.lineTo(sx + sw - rr, sy); ctx.quadraticCurveTo(sx + sw, sy, sx + sw, sy + rr);
+      ctx.lineTo(sx + sw, sy + sh - rr); ctx.quadraticCurveTo(sx + sw, sy + sh, sx + sw - rr, sy + sh);
+      ctx.lineTo(sx + rr, sy + sh); ctx.quadraticCurveTo(sx, sy + sh, sx, sy + sh - rr);
+      ctx.lineTo(sx, sy + rr); ctx.quadraticCurveTo(sx, sy, sx + rr, sy);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+
+      text(ctx, `row k = ${selCarrier}`, stripX + 10, stripY + 18,
+           { color: colors.accent, weight: 750, size: 12.5 });
+      text(ctx, `y_k = desired + leaks + noise`, stripX + 10, stripY + 36,
+           { color: colors.ink, size: 11, weight: 600 });
+
+      const entries = [];
+      for (let l = 0; l < N; l++) {
+        entries.push({ l, mag: absC(sim.C[sel][l]), diag: (l === sel) });
+      }
+      entries.sort((a, b) => b.mag - a.mag);
+      const diagEntry = entries.find(e => e.diag);
+      const offEntries = entries.filter(e => !e.diag).slice(0, 5);
+      const rowOrder = [diagEntry, ...offEntries].filter(Boolean);
+
+      let cy0 = stripY + 56;
+      const lineH = 17;
+      for (const e of rowOrder) {
+        if (cy0 > stripY + sh - 26) break;
+        const isDiag = e.diag;
+        const col = isDiag ? colors.accent : (Math.abs(e.l - sel) === 1 ? colors.gold : colors.red);
+        ctx.fillStyle = col;
+        ctx.fillRect(stripX + 10, cy0 - 9, 8, 8);
+        const rel = e.l - sel;
+        const tag = isDiag ? `desired d_k` : `leak from k${rel > 0 ? '+' : ''}${rel}`;
+        text(ctx, tag, stripX + 24, cy0, { color: colors.ink, size: 11 });
+        cy0 += lineH;
+      }
+
+      // strip footer: ICI ratio
+      let onD = 0, off = 0;
+      for (let l = 0; l < N; l++) {
+        const e = abs2(sim.C[sel][l]);
+        if (l === sel) onD += e; else off += e;
+      }
+      const ratio = onD > 1e-12 ? 10 * Math.log10(off / onD) : -Infinity;
+      const ratioStr = isFinite(ratio) ? `${ratio.toFixed(1)} dB` : '-∞ dB';
+      text(ctx, `ICI / desired:`, stripX + 10, stripY + sh - 8,
+           { color: colors.muted, size: 11 });
+      text(ctx, ratioStr, stripX + sw - 12, stripY + sh - 8,
+           { color: off > onD * 0.05 ? colors.red : colors.accent, size: 11.5, weight: 700, align: 'right' });
+    }
+
+    /* =========================================================
+       VIEW 3 — Spectrum (sinc tails)
+       Each carrier rendered as |sinc| centred at its arrival
+       frequency. Dashed verticals at integer carrier indices
+       are the FFT bin grid. Blue dots show what each bin
+       actually reads (RMS sum of contributions). Clean OFDM
+       places those samples on every other carrier's zeros.
+       ========================================================= */
+    function drawSpectrum() {
+      const { ctx, w, h } = prepareCanvas(els.spectrumCanvas);
+      ctx.fillStyle = colors.panel;
+      ctx.fillRect(0, 0, w, h);
+
+      const sel = state.binIndex;
+      const halfShown = 6;
+      const lo = Math.max(0, sel - halfShown);
+      const hi = Math.min(state.N - 1, sel + halfShown);
+      const carriers = carrierList();
+
+      const padL = 32, padR = 14, padT = 30, padB = 40;
+      const plotW = w - padL - padR;
+      const plotH = h - padT - padB;
+
+      const xMin = carriers[lo] - 0.55;
+      const xMax = carriers[hi] + 0.55;
+      const x2px = (f) => padL + ((f - xMin) / (xMax - xMin)) * plotW;
+      const y0 = padT + plotH;
+
+      // header
+      text(ctx, 'carrier sincs: blue dots are FFT-bin samples',
+           12, 20, { color: colors.ink, size: 12.5, weight: 650 });
+
+      // baseline
+      line(ctx, padL, y0, padL + plotW, y0, colors.muted, 1);
+
+      // FFT bin grid (dashed blue verticals at integer carrier indices)
+      for (let i = lo; i <= hi; i++) {
+        const fx = x2px(carriers[i]);
+        line(ctx, fx, padT, fx, y0, colors.blue, 0.7, [2, 3]);
+      }
+
+      // each carrier's sinc, centred at arrivalFrequency
+      function sincMag(f, c) {
+        const x = f - arrivalFrequency(c);
+        if (Math.abs(x) < 1e-9) return 1;
+        const u = Math.PI * x;
+        return Math.abs(Math.sin(u) / u);
+      }
+      const palette = (i) => {
+        if (i === sel) return colors.accent;
+        if (i === sel + 1) return colors.gold;
+        if (i === sel - 1) return colors.red;
+        return 'rgba(95,103,95,0.55)';
+      };
+      for (let i = lo; i <= hi; i++) {
+        const c = carriers[i];
+        ctx.save();
+        ctx.strokeStyle = palette(i);
+        ctx.lineWidth = i === sel ? 2.2 : (i === sel + 1 || i === sel - 1) ? 1.7 : 1.0;
+        ctx.beginPath();
+        const STEPS = 320;
+        for (let s = 0; s <= STEPS; s++) {
+          const f = xMin + (s / STEPS) * (xMax - xMin);
+          const mag = sincMag(f, c);
+          const px = x2px(f);
+          const py = y0 - mag * plotH * 0.86;
+          if (s === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // FFT bin sample dots: what each bin r actually picks up
+      for (let r = lo; r <= hi; r++) {
+        const fx = x2px(carriers[r]);
+        let tot = 0;
+        for (let l = 0; l < state.N; l++) {
+          const x = carriers[r] - arrivalFrequency(carriers[l]);
+          const u = Math.PI * x;
+          const m = Math.abs(x) < 1e-9 ? 1 : Math.abs(Math.sin(u) / u);
+          tot += m * m;
+        }
+        const totMag = Math.sqrt(tot);
+        const py = y0 - Math.min(totMag, 1.1) * plotH * 0.86;
+        ctx.fillStyle = colors.blue;
+        ctx.beginPath();
+        ctx.arc(fx, py, r === sel ? 5 : 3.2, 0, TAU);
+        ctx.fill();
+        // x-axis tick label
+        text(ctx, String(carriers[r]), fx, h - 18, { align: 'center', size: 10, color: colors.muted });
+      }
+
+      // axes labels
+      text(ctx, 'carrier index (frequency in bins)', padL + plotW / 2, h - 4,
+           { align: 'center', size: 11, color: colors.muted });
+      text(ctx, '|amplitude|', padL, padT - 8, { align: 'left', size: 11, color: colors.muted });
+
+      // selected-bin annotation
+      const fxSel = x2px(carriers[sel]);
+      text(ctx, `bin k = ${carriers[sel]}`, fxSel, padT + 13,
+           { align: 'center', size: 11, color: colors.accent, weight: 700 });
+
+      // legend at bottom
+      const legY = h - 38;
+      let lx = padL;
+      function legendSwatch(label, col) {
+        ctx.fillStyle = col;
+        ctx.fillRect(lx, legY - 9, 14, 4);
+        text(ctx, label, lx + 18, legY - 5, { size: 11, color: colors.muted });
+        lx += 18 + 9 + ctx.measureText(label).width + 12;
+      }
+      legendSwatch('desired k', colors.accent);
+      legendSwatch('k+1', colors.gold);
+      legendSwatch('k-1', colors.red);
+      ctx.fillStyle = colors.blue;
+      ctx.beginPath(); ctx.arc(lx + 4, legY - 7, 4, 0, TAU); ctx.fill();
+      text(ctx, 'FFT bin sample', lx + 12, legY - 5, { size: 11, color: colors.muted });
+    }
+
+    /* =========================================================
+       VIEW 4 — Constellation
+       Two complex planes: raw FFT output (before equalisation)
+       and one-tap equalised. Red error vector from received to
+       ideal QPSK target on the selected bin.
+       ========================================================= */
+    function drawConstellation(sim) {
+      const { ctx, w, h } = prepareCanvas(els.constellationCanvas);
+      ctx.fillStyle = colors.panel;
+      ctx.fillRect(0, 0, w, h);
+      const left  = { x: w * 0.27, y: h * 0.55, r: Math.min(w, h) * 0.27 };
+      const right = { x: w * 0.73, y: h * 0.55, r: Math.min(w, h) * 0.27 };
+
+      function plane(p, title, subtitle) {
+        line(ctx, p.x - p.r, p.y, p.x + p.r, p.y, colors.muted, 1);
+        line(ctx, p.x, p.y + p.r, p.x, p.y - p.r, colors.muted, 1);
+        text(ctx, title, p.x, 22, { align: 'center', weight: 750, size: 13 });
+        text(ctx, subtitle, p.x, 38, { align: 'center', color: colors.muted, size: 11 });
+        ctx.strokeStyle = colors.line;
+        ctx.strokeRect(p.x - p.r, p.y - p.r, p.r * 2, p.r * 2);
+        const inv = 1 / Math.sqrt(2);
+        const targets = [[inv, inv], [-inv, inv], [-inv, -inv], [inv, -inv]];
+        ctx.save();
+        ctx.strokeStyle = 'rgba(15,105,94,0.55)';
+        ctx.fillStyle = 'rgba(15,105,94,0.07)';
+        const scale = p.r * 0.62;
+        targets.forEach(([re, im]) => {
+          const tx = p.x + re * scale, ty = p.y - im * scale;
+          ctx.beginPath();
+          ctx.arc(tx, ty, 8, 0, TAU);
+          ctx.fill();
+          ctx.stroke();
+        });
+        ctx.restore();
+      }
+      plane(left, 'raw FFT output', 'before equalisation');
+      plane(right, 'one-tap equalised', 'after dividing by c_{k,k}');
+
+      function pos(p, z) {
+        const scale = p.r * 0.62;
+        return { x: p.x + z.re * scale, y: p.y - z.im * scale };
+      }
+      function dot(p, z, color, radius) {
+        radius = radius || 3;
+        const xy = pos(p, z);
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(xy.x, xy.y, radius, 0, TAU);
+        ctx.fill();
+      }
+
+      // error vectors on right plane
+      for (let i = 0; i < sim.eq.length; i++) {
+        if (i === state.binIndex) continue;
+        const a = pos(right, sim.eq[i]);
+        const b = pos(right, sim.d[i]);
+        ctx.strokeStyle = 'rgba(164,59,54,0.25)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+      // selected bin error arrow
+      {
+        const a = pos(right, sim.eq[state.binIndex]);
+        const b = pos(right, sim.d[state.binIndex]);
+        arrow(ctx, a.x, a.y, b.x, b.y, colors.red, 1.6);
+      }
+
+      for (const z of sim.d) dot(left,  z, 'rgba(95,103,95,0.30)', 2.2);
+      for (const z of sim.d) dot(right, z, 'rgba(95,103,95,0.30)', 2.2);
+      for (let i = 0; i < sim.raw.length; i++) {
+        const sel = (i === state.binIndex);
+        dot(left,  sim.raw[i], sel ? colors.red    : colors.gold, sel ? 5 : 2.6);
+        dot(right, sim.eq[i],  sel ? colors.accent : colors.blue, sel ? 5 : 2.6);
+      }
+
+      // dashed line from origin to selected raw point
+      {
+        const a = pos(left, sim.raw[state.binIndex]);
+        line(ctx, left.x, left.y, a.x, a.y, 'rgba(164,59,54,0.5)', 1.2, [3, 3]);
+      }
+
+      const errMag = absC(sub(sim.eq[state.binIndex], sim.d[state.binIndex]));
+      text(ctx, `selected bin error |Δ| = ${errMag.toFixed(3)}`,
+           right.x, right.y + right.r + 22, { align: 'center', color: colors.red, size: 11.5, weight: 700 });
+      text(ctx, 'green ring = ideal QPSK target   ·   red line = error vector',
+           w / 2, h - 8, { align: 'center', color: colors.muted, size: 11 });
+    }
+
+    /* ---------- metrics + story ---------- */
+    function updateMetrics(sim) {
+      let diag = 0, off = 0;
+      for (let r = 0; r < state.N; r++) {
+        for (let l = 0; l < state.N; l++) {
+          const e = abs2(sim.C[r][l]);
+          if (r === l) diag += e; else off += e;
+        }
+      }
+      const sel = state.binIndex;
+      let selOff = 0;
+      for (let l = 0; l < state.N; l++) if (l !== sel) selOff += abs2(sim.C[sel][l]);
+      const selDiag = abs2(sim.C[sel][sel]);
+      let evm2 = 0;
+      for (let i = 0; i < state.N; i++) evm2 += abs2(sub(sim.eq[i], sim.d[i]));
+      evm2 /= state.N;
+      els.avgIciMetric.textContent = db(off / Math.max(diag, 1e-12));
+      els.selectedIciMetric.textContent = db(selOff / Math.max(selDiag, 1e-12));
+      els.evmMetric.textContent = pct(Math.sqrt(evm2));
+
+      if (off / Math.max(diag, 1e-12) < 1e-6) {
+        els.insightBox.textContent = 'Clean OFDM: bin k subtracts exactly k turns. The desired carrier freezes; neighbours make whole circles that average to zero.';
+      } else if (Math.abs(state.scalePct) < 1e-9) {
+        els.insightBox.textContent = 'Frequency offset leaves a fractional leftover spin. A neighbour makes 1.28 turns instead of exactly 1, so the circle does not cancel.';
+      } else {
+        els.insightBox.textContent = 'Wideband Doppler changes each carrier clock by a different amount. Different leftover spins create different leakage into each bin.';
+      }
+    }
+
+    /* ---------- controls + render loop ---------- */
+    function syncControls() {
+      state.N = Number(els.subcarrierRange.value);
+      state.binIndex = Math.min(Number(els.binRange.value), state.N - 1);
+      els.binRange.max = String(state.N - 1);
+      els.binRange.value = String(state.binIndex);
+      state.snrDb = Number(els.snrRange.value);
+      state.phaseDeg = 0;
+      state.cfo = Number(els.cfoRange.value);
+      state.scalePct = Number(els.scaleRange.value);
+      els.subcarrierOut.textContent = String(state.N);
+      els.binOut.textContent = String(selectedCarrier());
+      els.snrOut.textContent = `${state.snrDb} dB`;
+      els.cfoOut.textContent = `${state.cfo.toFixed(2)} bins`;
+      els.scaleOut.textContent = `${state.scalePct.toFixed(2)}%`;
+    }
+    let lastSim = null;
+    function render() {
+      syncControls();
+      const sim = simulate();
+      lastSim = sim;
+      drawPhasor(sim);
+      drawMatrix(sim);
+      drawSpectrum();
+      drawConstellation(sim);
+      updateMetrics(sim);
+    }
+    function applyPreset(name) {
+      const presets = {
+        clean:    { phaseDeg: 0,  cfo: 0,    scalePct: 0,    status: 'clean OFDM' },
+        cfo:      { phaseDeg: 0,  cfo: 0.28, scalePct: 0,    status: 'common frequency offset' },
+        wideband: { phaseDeg: 0,  cfo: 0.20, scalePct: 0.70, status: 'wideband Doppler' },
+        strong:   { phaseDeg: 0,  cfo: 0.42, scalePct: 1.35, status: 'strong ICI' }
+      };
+      const p = presets[name] || presets.wideband;
+      state.phaseDeg = p.phaseDeg;
+      state.cfo = p.cfo;
+      state.scalePct = p.scalePct;
+      els.cfoRange.value = String(state.cfo);
+      els.scaleRange.value = String(state.scalePct);
+      els.statusText.textContent = p.status;
+      render();
+      tut.activePreset = (presets[name] ? name : 'wideband');
+      updateTutButton();
+      if (els.tutOverlay.classList.contains('show')) {
+        tut.step = 0;
+        tutRefresh();
+      }
+    }
+    function setSelectedCarrierForTour(carrier) {
+      state.N = Number(els.subcarrierRange.value);
+      const half = Math.floor(state.N / 2);
+      const idx = Math.max(0, Math.min(state.N - 1, carrier + half));
+      state.binIndex = idx;
+      els.binRange.value = String(idx);
+    }
+    function tick(ts) {
+      if (!state.lastTs) state.lastTs = ts;
+      const dt = Math.min(0.05, (ts - state.lastTs) / 1000);
+      state.lastTs = ts;
+      if (state.animating) {
+        state.time = (state.time + dt * 0.22) % 1;
+        render();
+        requestAnimationFrame(tick);
+      }
+    }
+
+    /* ---------- guided tour ---------- */
+    const tourSteps = [
+      {
+        preset: 'clean',
+        binCarrier: 4,
+        title: 'Step 1 — A carrier is a clock hand',
+        body: '<p>A complex carrier is not just a line on a spectrum. In time, it is a clock hand whose angle keeps changing: <strong>phase rotates because time is passing</strong>.</p><p><span class="tour-eq">one extra bin = one extra full turn during one OFDM symbol</span></p>'
+      },
+      {
+        preset: 'clean',
+        binCarrier: 4,
+        title: 'Step 2 — The FFT bin is a rotating camera',
+        body: '<p>Bin <strong>k</strong> asks: “how much of the received waveform looks like my carrier?” To ask that, it multiplies by a reference spinning backward at exactly <strong>k</strong> turns per symbol.</p><p><span class="tour-eq">what bin k sees = carrier spin − bin-k spin</span></p>'
+      },
+      {
+        preset: 'clean',
+        binCarrier: 4,
+        title: 'Step 3 — Why clean neighbours disappear',
+        body: '<p>In clean OFDM, carrier <strong>k</strong> minus bin <strong>k</strong> has zero leftover spin, so it freezes and averages to a symbol.</p><p>Carrier <strong>k+1</strong> minus bin <strong>k</strong> has exactly one leftover turn. Over the full symbol it goes around a complete circle, so positive and negative parts cancel to zero.</p>'
+      },
+      {
+        preset: 'cfo',
+        binCarrier: 4,
+        title: 'Step 4 — Frequency offset breaks the circle',
+        body: '<p>Now every carrier is shifted by a fraction of a bin. Carrier <strong>k+1</strong> viewed by bin <strong>k</strong> might make <strong>1.28</strong> turns, not exactly one.</p><p>Because the path does not end where it started, the average is not zero. That leftover arrow is what leaks into bin k: <strong>ICI</strong>.</p>'
+      },
+      {
+        preset: 'wideband',
+        binCarrier: 4,
+        title: 'Step 5 — Doppler changes the spin speeds',
+        body: '<p>Wideband Doppler is more than one shared sideways shift. It scales frequencies, so low and high carriers get different leftover spins.</p><p>That is why the ICI matrix is no longer only a neat uniform band: each bin sees a slightly different leakage pattern.</p>'
+      },
+      {
+        preset: 'strong',
+        binCarrier: 4,
+        title: 'Step 6 — What the receiver sees',
+        body: '<p>The constellation shows the practical damage. One-tap equalisation can undo a common complex gain on each bin, but it cannot remove symbols that leaked in from neighbours.</p><p>So Doppler is painful because the received bin is no longer “my symbol times one number.” It becomes <strong>my symbol plus pieces of other symbols</strong>.</p>'
+      }
+    ];
+    let tourIdx = 0;
+    function showTourStep(i) {
+      tourIdx = Math.max(0, Math.min(tourSteps.length - 1, i));
+      const s = tourSteps[tourIdx];
+      els.tourBanner.style.display = 'block';
+      els.tourStepNum.textContent = String(tourIdx + 1);
+      els.tourTitle.textContent = s.title;
+      els.tourBody.innerHTML = s.body;
+      renderMath(els.tourBody);
+      els.tourPrev.disabled = (tourIdx === 0);
+      els.tourNext.textContent = (tourIdx === tourSteps.length - 1) ? 'Done ✓' : 'Next ›';
+      els.presetSelect.value = s.preset;
+      if (typeof s.binCarrier === 'number') setSelectedCarrierForTour(s.binCarrier);
+      applyPreset(s.preset);
+    }
+    function closeTour() {
+      els.tourBanner.style.display = 'none';
+    }
+    els.tourBtn.addEventListener('click', () => {
+      if (els.tourBanner.style.display === 'none' || !els.tourBanner.style.display) {
+        showTourStep(0);
+      } else {
+        closeTour();
+      }
+    });
+    els.tourPrev.addEventListener('click', () => showTourStep(tourIdx - 1));
+    els.tourNext.addEventListener('click', () => {
+      if (tourIdx >= tourSteps.length - 1) closeTour();
+      else showTourStep(tourIdx + 1);
+    });
+    els.tourClose.addEventListener('click', closeTour);
+
+    /* ---------- 3D matrix orbit controls ---------- */
+    (function bindOrbit() {
+      const cv = els.matrixCanvas;
+      let dragging = false;
+      let lastX = 0, lastY = 0;
+      cv.addEventListener('mousedown', e => {
+        dragging = true; lastX = e.clientX; lastY = e.clientY;
+        cv.classList.add('dragging');
+      });
+      window.addEventListener('mouseup', () => { dragging = false; cv.classList.remove('dragging'); });
+      window.addEventListener('mousemove', e => {
+        if (!dragging) return;
+        const dx = e.clientX - lastX, dy = e.clientY - lastY;
+        lastX = e.clientX; lastY = e.clientY;
+        state.matrixView.yaw += dx * 0.008;
+        state.matrixView.pitch = Math.max(0.15, Math.min(1.40, state.matrixView.pitch + dy * 0.006));
+        render();
+      });
+      cv.addEventListener('wheel', e => {
+        e.preventDefault();
+        const factor = Math.exp(e.deltaY * 0.001);
+        state.matrixView.scale = Math.max(0.4, Math.min(2.5, state.matrixView.scale / factor));
+        render();
+      }, { passive: false });
+      cv.addEventListener('touchstart', e => {
+        if (e.touches.length === 1) {
+          dragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+        }
+      });
+      cv.addEventListener('touchmove', e => {
+        if (!dragging || e.touches.length !== 1) return;
+        e.preventDefault();
+        const dx = e.touches[0].clientX - lastX, dy = e.touches[0].clientY - lastY;
+        lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+        state.matrixView.yaw += dx * 0.008;
+        state.matrixView.pitch = Math.max(0.15, Math.min(1.40, state.matrixView.pitch + dy * 0.006));
+        render();
+      }, { passive: false });
+      cv.addEventListener('touchend', () => { dragging = false; });
+    })();
+
+    document.querySelectorAll('input[type="range"]').forEach(input => input.addEventListener('input', render));
+    els.presetSelect.addEventListener('change', () => applyPreset(els.presetSelect.value));
+    els.playBtn.addEventListener('click', () => {
+      state.animating = !state.animating;
+      els.playBtn.textContent = state.animating ? '⏸' : '▶';
+      state.lastTs = 0;
+      if (state.animating) requestAnimationFrame(tick);
+    });
+    els.stepBtn.addEventListener('click', () => {
+      state.seed += 1;
+      state.time = (state.time + 0.08) % 1;
+      render();
+    });
+    window.addEventListener('resize', render);
+
+    /* =========================================================
+       HOVER TOOLTIPS — show the math behind each view.
+       One shared #mathtip div, content set per canvas, position
+       follows the cursor. Numbers are read live from `state`.
+       ========================================================= */
+    function tipShow(html, ev) {
+      const t = els.mathtip;
+      t.innerHTML = html;
+      renderMath(t);
+      t.classList.add('show');
+      tipMove(ev);
+    }
+    function tipMove(ev) {
+      const t = els.mathtip;
+      const pad = 14;
+      const tw = t.offsetWidth || 280;
+      const th = t.offsetHeight || 80;
+      let x = ev.clientX + pad;
+      let y = ev.clientY + pad;
+      if (x + tw > window.innerWidth - 8) x = ev.clientX - tw - pad;
+      if (y + th > window.innerHeight - 8) y = ev.clientY - th - pad;
+      t.style.left = x + 'px';
+      t.style.top = y + 'px';
+    }
+    function tipHide() {
+      els.mathtip.classList.remove('show');
+    }
+    function num(x, digits) { digits = digits !== undefined ? digits : 3; return `<span class="num">${x.toFixed(digits)}</span>`; }
+
+    /* LaTeX render helper. Falls back to escaped text if KaTeX hasn't loaded yet. */
+    function tex(src, opts) {
+      opts = opts || {};
+      if (window.katex && typeof window.katex.renderToString === 'function') {
+        try {
+          return window.katex.renderToString(src, {
+            throwOnError: false,
+            displayMode: !!opts.display,
+            output: 'html'
+          });
+        } catch (e) {
+          return src;
+        }
+      }
+      const escaped = src.replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+      return opts.display ? `\\[${escaped}\\]` : `\\(${escaped}\\)`;
+    }
+
+    /* Render any \(...\) and \[...\] delimited math inside an element in place. */
+    function renderMath(el, retryCount) {
+      if (!el) return;
+      if (window.renderMathInElement) {
+        try {
+          window.renderMathInElement(el, {
+            throwOnError: false,
+            delimiters: [
+              { left: '\\(', right: '\\)', display: false },
+              { left: '\\[', right: '\\]', display: true }
+            ]
+          });
+        } catch (e) { /* swallow */ }
+      } else if ((retryCount || 0) < 80) {
+        setTimeout(() => {
+          if (el.isConnected) renderMath(el, (retryCount || 0) + 1);
+        }, 100);
+      }
+    }
+
+    /* ----- Phasor tooltip: figure out which of 3 panels the cursor is in ----- */
+    function phasorTip(ev) {
+      const cv = els.phasorCanvas;
+      const r = cv.getBoundingClientRect();
+      const rel = (ev.clientX - r.left) / r.width;
+      const panelIdx = Math.max(0, Math.min(2, Math.floor(rel * 3)));
+      const rx = selectedCarrier();
+      const txList = [rx - 1, rx, rx + 1];
+      const tx = txList[panelIdx];
+      const delta = arrivalFrequency(tx) - rx;
+      const coeff = fullCoeff(rx, tx);
+      const mag = absC(coeff);
+      const label = (panelIdx === 1) ? 'desired carrier k' : (panelIdx === 0 ? 'neighbour k − 1' : 'neighbour k + 1');
+      const html = `
+        <div class="ttl">Phasor view · ${label}</div>
+        bin <b>k = ${rx}</b> demodulates by multiplying with
+        <span class="eq">${tex('e^{-j\\,2\\pi f_k t}')}</span>
+        so the trail you see is
+        <span class="eq">${tex('e^{\\,j\\,2\\pi (f_\\ell + \\delta_\\ell - f_k)\\,t}')}</span>
+        leftover spin = ${num(delta, 3)} turns / symbol
+        <br>integral over <span class="ieq">${tex('T')}</span> (= ICI coefficient):
+        <span class="eq">${tex('c_{\\ell,k} = \\dfrac{1}{T}\\int_0^T e^{\\,j\\,2\\pi(f_\\ell+\\delta_\\ell-f_k)t}\\,dt')}</span>
+        <span class="ieq">${tex('|c|')}</span> = ${num(mag, 4)} ${mag < 0.012 ? '— closes ✓' : '— residual ✘ (ICI)'}
+      `;
+      tipShow(html, ev);
+    }
+
+    /* ----- Matrix tooltip ----- */
+    function matrixTip(ev) {
+      const sel = state.binIndex;
+      let onD = 0, off = 0;
+      const sim = lastSim;
+      if (sim) {
+        for (let l = 0; l < state.N; l++) {
+          const e = abs2(sim.C[sel][l]);
+          if (l === sel) onD += e; else off += e;
+        }
+      }
+      const ratioStr = (onD > 1e-12) ? `${(10 * Math.log10(off / Math.max(onD, 1e-12))).toFixed(1)} dB` : '−∞ dB';
+      const html = `
+        <div class="ttl">ICI matrix · row k = ${selectedCarrier()}</div>
+        each bar height = <span class="ieq">${tex('|c_{r,\\ell}|')}</span> with
+        <span class="eq">${tex('c_{r,\\ell} = e^{j\\phi}\\,\\mathrm{sinc}(\\pi\\Delta f)\\,e^{\\,j\\pi\\Delta f}')}</span>
+        <span class="eq">${tex('\\Delta f = f_\\ell + \\delta_\\ell - f_r')}</span>
+        received bin <span class="ieq">${tex('r')}</span> is the dot product of row <span class="ieq">${tex('r')}</span> with all symbols:
+        <span class="eq">${tex('y_r = \\sum_{\\ell} c_{r,\\ell}\\, d_\\ell + n_r')}</span>
+        for this row, <span class="ieq">${tex('\\mathrm{ICI}/\\mathrm{desired}')}</span> = <b>${ratioStr}</b>
+        <br><span style="color:var(--muted);">drag to orbit · wheel to zoom</span>
+      `;
+      tipShow(html, ev);
+    }
+
+    /* ----- Spectrum tooltip ----- */
+    function spectrumTip(ev) {
+      const html = `
+        <div class="ttl">Spectrum view</div>
+        each carrier <span class="ieq">${tex('\\ell')}</span> is a sinc centred at <span class="ieq">${tex('f_\\ell + \\delta_\\ell')}</span>:
+        <span class="eq">${tex('|H_\\ell(f)| = \\big|\\mathrm{sinc}\\big(\\pi(f - f_\\ell - \\delta_\\ell)\\big)\\big|')}</span>
+        FFT bin <span class="ieq">${tex('r')}</span> samples the spectrum at <span class="ieq">${tex('f = f_r')}</span> (dashed blue line).
+        <br><b>Clean OFDM</b>: every carrier's peak sits on its own bin and on every other carrier's <em>zero</em> → no leakage.
+        <br><b>With Doppler</b>: the comb is shifted by <span class="ieq">${tex('\\delta_\\ell')}</span>, so bins no longer land on zeros and pick up the tails.
+        <span class="eq">${tex('y_r \\approx \\sum_\\ell \\mathrm{sinc}\\big(\\pi(f_r - f_\\ell - \\delta_\\ell)\\big)\\,d_\\ell')}</span>
+      `;
+      tipShow(html, ev);
+    }
+
+    /* ----- Constellation tooltip ----- */
+    function constellationTip(ev) {
+      const sel = state.binIndex;
+      const sim = lastSim;
+      let errMag = 0;
+      if (sim) errMag = absC(sub(sim.eq[sel], sim.d[sel]));
+      const html = `
+        <div class="ttl">Constellation · bin k = ${selectedCarrier()}</div>
+        received complex sample on bin <span class="ieq">${tex('k')}</span>:
+        <span class="eq">${tex('y_k = c_{k,k}\\,d_k + \\sum_{\\ell\\neq k} c_{k,\\ell}\\,d_\\ell + n_k')}</span>
+        one-tap equalisation divides by the diagonal:
+        <span class="eq">${tex('\\hat{d}_k = y_k / c_{k,k}')}</span>
+        this cancels the desired gain, but the residual sum
+        <span class="ieq">${tex('\\sum_{\\ell\\neq k} c_{k,\\ell}\\,d_\\ell')}</span>
+        is unknown noise — that is why the cloud spreads.
+        <br>selected-bin error <span class="ieq">${tex('|\\Delta|')}</span> = ${num(errMag, 3)}
+      `;
+      tipShow(html, ev);
+    }
+
+    function bindTip(canvas, fn) {
+      canvas.addEventListener('mouseenter', fn);
+      canvas.addEventListener('mousemove', ev => {
+        // refresh content roughly every move; cheap
+        fn(ev);
+      });
+      canvas.addEventListener('mouseleave', tipHide);
+    }
+    bindTip(els.phasorCanvas, phasorTip);
+    bindTip(els.matrixCanvas, matrixTip);
+    bindTip(els.spectrumCanvas, spectrumTip);
+    bindTip(els.constellationCanvas, constellationTip);
+
+    /* lastSim is set inside render() above so tooltips can read live numbers */
+
+    /* =========================================================
+       OFDM TUTORIAL — separate modal scene.
+       Walks through bits → BPSK symbols → tones (carriers) →
+       time-domain sum → FFT → recovered bits.  Defaults to
+       N = 8 fixed: enough tones to see structure, small enough
+       that every cosine, FFT stem and phasor stays readable.
+       ========================================================= */
+    const tut = {
+      N: 8,
+      step: 0,
+      bits: [1, 0, 1, 1, 0, 0, 1, 0],
+      seed: 11,
+      anim: 0,
+      activePreset: 'wideband'
+    };
+
+    function tutSymbolsFromBits(bits, N) {
+      // BPSK: 0 → -1, 1 → +1 ; one bit per carrier
+      const inv = 1; // BPSK has unit-magnitude symbols for clarity
+      return bits.slice(0, N).map(b => complex(b ? +inv : -inv, 0));
+    }
+    function tutTimeDomain(symbols, samples) {
+      const N = symbols.length;
+      const out = new Array(samples);
+      for (let n = 0; n < samples; n++) {
+        const t = n / samples;             // t ∈ [0,1) representing one OFDM symbol period T=1
+        let re = 0, im = 0;
+        for (let k = 0; k < N; k++) {
+          // carrier k frequency = k cycles per symbol (subcarrier index 0..N-1)
+          const a = TAU * k * t;
+          re += symbols[k].re * Math.cos(a) - symbols[k].im * Math.sin(a);
+          im += symbols[k].re * Math.sin(a) + symbols[k].im * Math.cos(a);
+        }
+        out[n] = complex(re / N, im / N);  // normalised IFFT
+      }
+      return out;
+    }
+    function tutFFT(time) {
+      // direct DFT (small N, fine)
+      const N = time.length;
+      const X = new Array(N);
+      for (let k = 0; k < N; k++) {
+        let re = 0, im = 0;
+        for (let n = 0; n < N; n++) {
+          const a = -TAU * k * n / N;
+          re += time[n].re * Math.cos(a) - time[n].im * Math.sin(a);
+          im += time[n].re * Math.sin(a) + time[n].im * Math.cos(a);
+        }
+        X[k] = complex(re, im);
+      }
+      return X;
+    }
+
+    /* phasor-view derivation: appended to every scenario as steps 7-9. */
+    const commonTutSuffix = [
+      {
+        title: '8 · Where does the phasor view come from?',
+        kind: 'phasor-derive-formula',
+        narration: `<strong>Step back to the FFT integral.</strong> For bin \\(k\\) the receiver computes \\[ y_k = \\int_0^T r(t)\\, e^{-j\\,2\\pi f_k t}\\, dt. \\] The received signal is the sum of all carriers \\( r(t) = \\sum_\\ell d_\\ell\\, e^{\\,j\\,2\\pi(f_\\ell+\\delta_\\ell) t} \\), so swap sum and integral: <span class="eq">\\( y_k = \\displaystyle\\sum_\\ell d_\\ell \\int_0^T e^{\\,j\\,2\\pi(f_\\ell+\\delta_\\ell-f_k)\\,t}\\, dt \\)</span> Each integrand is a pure rotation — that is exactly what the phasor view draws, one little phasor per carrier \\(\\ell\\).`
+      },
+      {
+        title: '9 · Each carrier becomes a clock hand inside bin k',
+        kind: 'phasor-derive-rotation',
+        narration: `<strong>Inside the integral, carrier \\(\\ell\\) is a rotation at rate</strong> \\( \\Delta f = (f_\\ell + \\delta_\\ell) - f_k. \\) Bin \\(k\\) sees three kinds of clock hand: <span class="eq">\\( \\ell = k:\\;\\Delta f = 0 \\;\\Rightarrow\\; \\text{stands still — averages to } d_k \\)</span> <span class="eq">\\( \\ell = k\\pm 1:\\;\\Delta f = \\pm 1 + \\delta \\;\\Rightarrow\\; \\text{(almost) one full turn} \\)</span> That picture — one little phasor per neighbour, drawn inside the unit circle — is the workbench's <em>Phasor view</em>.`
+      },
+      {
+        title: '10 · Closed loop ✓  vs Doppler spiral ✘',
+        kind: 'phasor-derive-loop',
+        narration: `<strong>The integral averages to zero only if the loop closes.</strong> Whole number of turns ⇒ positive and negative pieces cancel: <span class="eq">\\( \\int_0^T e^{\\,j\\,2\\pi\\,(1)\\,t/T}\\, dt = 0 \\)</span> Fractional turns ⇒ a leftover vector (= the ICI coefficient \\(c_{\\ell,k}\\)): <span class="eq">\\( \\int_0^T e^{\\,j\\,2\\pi(1+\\delta)t/T}\\, dt = e^{\\,j\\pi\\delta}\\,\\mathrm{sinc}(\\pi\\delta) \\neq 0 \\)</span> That residual vector is exactly the arrow you see pointing out of the origin in the main workbench's phasor panels.`
+      }
+    ];
+
+    const commonTutPrefix = [
+      {
+        title: '1 · Bits come in',
+        kind: 'bits',
+        narration: `<strong>OFDM starts with bits.</strong> For this small tutorial, the first \\(N\\) bits become one OFDM symbol: one payload value per subcarrier. <span class="eq">\\( b_k \\in \\{0,\\,1\\} \\)</span>`
+      },
+      {
+        title: '2 · Bits become symbols',
+        kind: 'bpsk',
+        narration: `<strong>Each bit becomes a small complex number.</strong> To keep the picture readable this tutorial uses BPSK: <span class="eq">\\( 0 \\rightarrow -1,\\quad 1 \\rightarrow +1 \\)</span> In a real system this row could be QPSK or QAM.`
+      },
+      {
+        title: '3 · Symbols ride on tones',
+        kind: 'cosines',
+        narration: `<strong>Each symbol is placed on its own tone.</strong> Subcarrier \\(k\\) is a clock hand that makes \\(k\\) full turns during one OFDM symbol. The data symbol \\(d_k\\) sets the sign or phase of that tone. <span class="eq">\\( d_k\\, e^{\\,j\\,2\\pi k t / T} \\)</span>`
+      },
+      {
+        title: '4 · Each carrier k spins k full turns in one symbol',
+        kind: 'spin-clocks',
+        narration: `<strong>This is OFDM's secret ingredient.</strong> Carrier \\(0\\) does not turn at all. Carrier \\(1\\) makes exactly one full turn during the symbol period \\(T\\). Carrier \\(2\\) makes two turns, carrier \\(3\\) makes three, and so on. <span class="eq">\\( e^{\\,j\\,2\\pi k t / T}\\quad\\Rightarrow\\quad k\\text{ turns in } t \\in [0,T] \\)</span> Different speeds means different rotations — that is what lets the FFT pull them apart later. Watch the hands; the slow ones are low subcarriers, the fast ones are high subcarriers.`
+      },
+      {
+        title: '5 · The transmitter adds the tones',
+        kind: 'sum',
+        narration: `<strong>The transmitted OFDM waveform is the sum.</strong> All subcarriers exist at the same time, but their spin rates are carefully chosen so the FFT can separate them later. <span class="eq">\\( s(t) = \\dfrac{1}{N}\\displaystyle\\sum_{k=0}^{N-1} d_k\\, e^{\\,j\\,2\\pi k t / T} \\)</span>`
+      }
+    ];
+
+    const tutScenarios = {
+      clean: {
+        label: 'Clean OFDM',
+        steps: [
+          ...commonTutPrefix,
+          {
+            title: '6 · FFT separates clean tones',
+            kind: 'fft',
+            narration: `<strong>Clean OFDM is the happy case.</strong> Bin \\(k\\) multiplies by a backward-spinning copy of tone \\(k\\). The desired tone freezes; every other tone makes a whole number of turns and averages to zero. <span class="eq">\\( y_k \\approx d_k \\)</span>`
+          },
+          {
+            title: '7 · Bits come back',
+            kind: 'demap',
+            narration: `<strong>The receiver reads each bin independently.</strong> Because there is no phase drift, no frequency offset, and no Doppler, the ICI matrix stays diagonal and the constellation points sit near their targets. <span class="eq">\\( \\hat{b}_k = \\operatorname{sign}\\!\\bigl(\\mathrm{Re}\\{y_k\\}\\bigr) \\)</span>`
+          },
+          ...commonTutSuffix
+        ]
+      },
+      cfo: {
+        label: 'Common Frequency Offset',
+        steps: [
+          ...commonTutPrefix,
+          {
+            title: '6 · The whole comb slides sideways',
+            kind: 'fft',
+            narration: `<strong>A common frequency offset changes the spin speed of every tone by the same fractional amount.</strong> A neighbour viewed from bin \\(k\\) no longer makes exactly one turn; it may make \\(1.28\\) turns, so the circle does not close. <span class="eq">\\( \\text{leftover spin} = (\\ell - k) + \\Delta f \\)</span>`
+          },
+          {
+            title: '7 · Fractional turns create ICI',
+            kind: 'demap',
+            narration: `<strong>The FFT bins now pick up tails from neighbouring tones.</strong> The matrix grows side bands and one-tap equalisation cannot remove symbols that leaked in from other bins. <span class="eq">\\( y_k = c_{k,k}\\, d_k + \\displaystyle\\sum_{\\ell\\neq k} c_{k,\\ell}\\, d_\\ell \\)</span>`
+          },
+          ...commonTutSuffix
+        ]
+      },
+      wideband: {
+        label: 'Wideband Doppler',
+        steps: [
+          ...commonTutPrefix,
+          {
+            title: '6 · Doppler scales the tone speeds',
+            kind: 'fft',
+            narration: `<strong>Wideband Doppler does not slide every carrier by the same amount.</strong> It scales frequency, so high-frequency subcarriers move more than low-frequency subcarriers. Each bin gets its own leftover-spin pattern. <span class="eq">\\( f_\\ell \\;\\longrightarrow\\; (1 + \\alpha)\\, f_\\ell + f_{\\mathrm{cfo}} \\)</span>`
+          },
+          {
+            title: '7 · Different bins get different leakage',
+            kind: 'demap',
+            narration: `<strong>The FFT still tries to separate tones using the old grid.</strong> But the arrived tones are warped away from that grid, so the off-diagonal leakage is no longer uniform. This is the core Doppler problem in the workbench views. <span class="eq">\\( c_{k,\\ell} \\text{ depends on both } k \\text{ and } \\ell \\)</span>`
+          },
+          ...commonTutSuffix
+        ]
+      },
+      strong: {
+        label: 'Strong ICI',
+        steps: [
+          ...commonTutPrefix,
+          {
+            title: '6 · Orthogonality is badly broken',
+            kind: 'fft',
+            narration: `<strong>With strong Doppler/offset, many neighbour circles fail to close.</strong> The desired symbol is still present, but it is surrounded by large pieces of other symbols. <span class="eq">\\( \\text{ICI power} \\;\\to\\; \\text{desired power} \\)</span>`
+          },
+          {
+            title: '7 · One-tap FFT detection collapses',
+            kind: 'demap',
+            narration: `<strong>One-tap equalisation only fixes the diagonal gain.</strong> It cannot know which neighbouring symbols created the leakage. That is why the constellation smears and why stronger receivers use joint equalisation/coding ideas. <span class="eq">\\( \\hat{d}_k \\neq d_k \\text{ when } \\textstyle\\sum_{\\ell\\neq k} c_{k,\\ell}\\, d_\\ell \\text{ is large} \\)</span>`
+          },
+          ...commonTutSuffix
+        ]
+      }
+    };
+
+    function currentTutScenario() {
+      return tutScenarios[tut.activePreset] || tutScenarios.wideband;
+    }
+    function currentTutSteps() {
+      return currentTutScenario().steps;
+    }
+    function updateTutButton() {
+      const scenario = currentTutScenario();
+      els.tutBtn.textContent = `📚 Tutorial: ${scenario.label}`;
+      els.tutBtn.title = `Open the OFDM tutorial for ${scenario.label}`;
+    }
+
+    function tutPrepare() {
+      const cv = els.tutCanvas;
+      const rect = cv.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const w = Math.max(420, Math.round(rect.width * dpr));
+      const h = Math.max(280, Math.round(rect.height * dpr));
+      if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+      const ctx = cv.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, rect.width, rect.height);
+      return { ctx, w: rect.width, h: rect.height };
+    }
+
+    function tutDrawBitsRow(ctx, bits, N, x0, y0, label, opts) {
+      opts = opts || {};
+      const cellW = opts.cellW || 36;
+      const gap = 6;
+      text(ctx, label, x0 - 8, y0 + 14, { color: colors.muted, size: 12, align: 'right', weight: 650 });
+      for (let i = 0; i < N; i++) {
+        const x = x0 + i * (cellW + gap);
+        ctx.fillStyle = bits[i] ? '#dfe9fb' : '#f4ead7';
+        ctx.strokeStyle = colors.line;
+        ctx.lineWidth = 1;
+        const rr = 5;
+        ctx.beginPath();
+        ctx.moveTo(x + rr, y0); ctx.lineTo(x + cellW - rr, y0);
+        ctx.quadraticCurveTo(x + cellW, y0, x + cellW, y0 + rr);
+        ctx.lineTo(x + cellW, y0 + 26 - rr);
+        ctx.quadraticCurveTo(x + cellW, y0 + 26, x + cellW - rr, y0 + 26);
+        ctx.lineTo(x + rr, y0 + 26); ctx.quadraticCurveTo(x, y0 + 26, x, y0 + 26 - rr);
+        ctx.lineTo(x, y0 + rr); ctx.quadraticCurveTo(x, y0, x + rr, y0);
+        ctx.closePath();
+        ctx.fill(); ctx.stroke();
+        text(ctx, String(bits[i]), x + cellW / 2, y0 + 18,
+             { align: 'center', size: 14, weight: 750,
+               color: bits[i] ? colors.blue : colors.gold });
+      }
+    }
+
+    function tutDrawSymRow(ctx, syms, N, x0, y0, label) {
+      const cellW = 36;
+      const gap = 6;
+      text(ctx, label, x0 - 8, y0 + 14, { color: colors.muted, size: 12, align: 'right', weight: 650 });
+      for (let i = 0; i < N; i++) {
+        const x = x0 + i * (cellW + gap);
+        const v = syms[i].re;
+        ctx.fillStyle = v > 0 ? '#dcece6' : '#f1dfdc';
+        ctx.strokeStyle = colors.line;
+        ctx.fillRect(x, y0, cellW, 26);
+        ctx.strokeRect(x, y0, cellW, 26);
+        text(ctx, v > 0 ? '+1' : '−1', x + cellW / 2, y0 + 18,
+             { align: 'center', size: 13, weight: 750,
+               color: v > 0 ? colors.accent : colors.red });
+      }
+    }
+
+    /* =========================================================
+       Phasor-derivation scenes (tutorial steps 7 · 8 · 9).
+       Show, from the FFT integral, how the main workbench's
+       "Phasor view" arises. The Doppler used here is read from
+       the currently active preset so the picture matches the
+       narration's scenario.
+       ========================================================= */
+    function tutScenarioParams() {
+      // Returns {phaseDeg, cfo, scalePct} matching the active preset.
+      const map = {
+        clean:    { phaseDeg: 0,  cfo: 0,    scalePct: 0    },
+        cfo:      { phaseDeg: 0,  cfo: 0.28, scalePct: 0    },
+        wideband: { phaseDeg: 0,  cfo: 0.20, scalePct: 0.70 },
+        strong:   { phaseDeg: 0,  cfo: 0.42, scalePct: 1.35 }
+      };
+      return map[tut.activePreset] || map.wideband;
+    }
+    function tutArrivalFreq(carrier, p) {
+      return carrier * (1 + p.scalePct / 100) + p.cfo;
+    }
+    function tutFullCoeff(rx, tx, p) {
+      const delta = tutArrivalFreq(tx, p) - rx;
+      const phi = p.phaseDeg * Math.PI / 180;
+      const phase = cis(phi);
+      const seg = (Math.abs(delta) < 1e-10)
+        ? complex(1, 0)
+        : (() => {
+            const A = TAU * delta;
+            const eb = cis(A * 1), ea = cis(A * 0);
+            const diff = sub(eb, ea);
+            return complex(diff.im / A, -diff.re / A);
+          })();
+      return mul(phase, seg);
+    }
+
+    function tutDrawPhasorPanel(ctx, cx, cy, r, rx, tx, color, label, p, showResidual) {
+      // dashed unit circle + axes
+      line(ctx, cx - r - 14, cy, cx + r + 14, cy, colors.muted, 1);
+      line(ctx, cx, cy - r - 14, cx, cy + r + 14, colors.muted, 1);
+      ctx.save();
+      ctx.strokeStyle = colors.line;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, TAU);
+      ctx.stroke();
+      ctx.restore();
+
+      const delta = tutArrivalFreq(tx, p) - rx;
+      const phi = p.phaseDeg * Math.PI / 180;
+      // rotation trail across t ∈ [0,1]
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      const STEPS = 220;
+      for (let i = 0; i <= STEPS; i++) {
+        const t = i / STEPS;
+        const a = phi + TAU * delta * t;
+        const x = cx + r * Math.cos(a);
+        const y = cy - r * Math.sin(a);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.restore();
+
+      // start (t=0) and end (t=T) dots
+      const aS = phi;
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(cx + r * Math.cos(aS), cy - r * Math.sin(aS), 4, 0, TAU); ctx.fill();
+      const aE = phi + TAU * delta;
+      ctx.strokeStyle = color; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cx + r * Math.cos(aE), cy - r * Math.sin(aE), 5, 0, TAU); ctx.stroke();
+
+      // residual arrow (= c_{ℓ,k}) if asked
+      let mag = 0, badge = '', badgeColor = colors.muted;
+      const coeff = tutFullCoeff(rx, tx, p);
+      mag = absC(coeff);
+      if (showResidual) {
+        const aw = mag > 0.012 ? 2.6 : 1.2;
+        arrow(ctx, cx, cy, cx + coeff.re * r * 1.5, cy - coeff.im * r * 1.5, color, aw);
+        if (tx === rx) { badge = '✓ desired symbol'; badgeColor = colors.accent; }
+        else if (mag < 0.012) { badge = '✓ closes → 0'; badgeColor = colors.accent; }
+        else { badge = '✘ residual → ICI'; badgeColor = colors.red; }
+      } else {
+        ctx.save();
+        ctx.fillStyle = colors.panel;
+        ctx.strokeStyle = 'rgba(95,103,95,0.55)';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 5, 0, TAU);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+        text(ctx, 'average tail', cx, cy + 18, {
+          align: 'center', size: 10, color: colors.muted
+        });
+      }
+
+      text(ctx, label, cx, cy + r + 30, { align: 'center', size: 13, weight: 750, color });
+      text(ctx, `leftover spin Δf·T = ${delta.toFixed(2)}`,
+           cx, cy + r + 47, { align: 'center', size: 11, color: colors.muted });
+      if (showResidual) {
+        text(ctx, badge, cx, cy + r + 64, { align: 'center', size: 11, weight: 700, color: badgeColor });
+        text(ctx, `|c| = ${mag.toFixed(3)}`, cx, cy + r + 80, { align: 'center', size: 11, color: colors.muted });
+      }
+    }
+
+    function tutDrawPhasorAveragePlot(ctx, x, y, w, h, rx, tx, p, color, title) {
+      const delta = tutArrivalFreq(tx, p) - rx;
+      const phi = p.phaseDeg * Math.PI / 180;
+      ctx.save();
+      ctx.fillStyle = '#fbf6e9';
+      ctx.strokeStyle = colors.line;
+      ctx.lineWidth = 1;
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeRect(x, y, w, h);
+      ctx.restore();
+
+      const padL = 42, padR = 18, padT = 24, padB = 28;
+      const px0 = x + padL;
+      const py0 = y + padT;
+      const pw = w - padL - padR;
+      const ph = h - padT - padB;
+      const mid = py0 + ph / 2;
+      const xOf = t => px0 + t * pw;
+      const yOf = v => mid - v * ph * 0.42;
+
+      text(ctx, title, x + 12, y + 16, { color: color, size: 12, weight: 750 });
+      line(ctx, px0, mid, px0 + pw, mid, colors.muted, 1);
+      line(ctx, px0, py0, px0, py0 + ph, colors.muted, 1);
+      text(ctx, '0', px0, y + h - 8, { color: colors.muted, size: 10, align: 'center' });
+      text(ctx, 'T', px0 + pw, y + h - 8, { color: colors.muted, size: 10, align: 'center' });
+      text(ctx, 't', px0 + pw + 9, mid + 4, { color: colors.muted, size: 10 });
+
+      function curve(part, stroke, dash) {
+        ctx.save();
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = 1.8;
+        if (dash) ctx.setLineDash(dash);
+        ctx.beginPath();
+        const STEPS = 260;
+        for (let i = 0; i <= STEPS; i++) {
+          const t = i / STEPS;
+          const a = phi + TAU * delta * t;
+          const v = part === 're' ? Math.cos(a) : Math.sin(a);
+          const px = xOf(t);
+          const py = yOf(v);
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+      curve('re', color);
+      curve('im', colors.blue, [4, 3]);
+
+      const coeff = tutFullCoeff(rx, tx, p);
+      const meanRe = coeff.re;
+      const meanIm = coeff.im;
+      line(ctx, px0, yOf(meanRe), px0 + pw, yOf(meanRe), color, 1.2, [2, 3]);
+      line(ctx, px0, yOf(meanIm), px0 + pw, yOf(meanIm), colors.blue, 1.2, [2, 3]);
+      text(ctx, 'Re', px0 + pw - 38, py0 + 12, { color, size: 11, weight: 700 });
+      text(ctx, 'Im', px0 + pw - 10, py0 + 12, { color: colors.blue, size: 11, weight: 700 });
+      text(ctx, `average = (${meanRe.toFixed(2)}, ${meanIm.toFixed(2)})`,
+           x + w - 12, y + h - 10, { color: colors.muted, size: 11, align: 'right' });
+    }
+
+    function tutDrawPhasorDerivation(ctx, w, h, kind) {
+      // map linter's three kinds onto local indices: 0=formula, 1=rotation, 2=loop
+      const localIdx = (kind === 'phasor-derive-formula') ? 0
+                     : (kind === 'phasor-derive-rotation') ? 1
+                     : 2;
+      const p = tutScenarioParams();
+
+      const headerY = TUT_TOP_RESERVED + 12;
+      text(ctx, `Phasor view — derivation (scenario: ${currentTutScenario().label})`,
+           18, headerY, { color: colors.ink, size: 14, weight: 750 });
+      text(ctx, 'top equation card is separate; the drawings below show rotation and averaging',
+           18, headerY + 18, { color: colors.muted, size: 11.5 });
+
+      // The actual formula now lives in the LaTeX overlay banner above the canvas.
+      // Just leave room for it (eqBoxH worth of vertical space) and add a one-line caption.
+      const eqBoxH = 60;
+      const eqCaptions = [
+        '↑ multiply r(t) by a clock spinning BACKWARD at k turns / symbol, then average',
+        '⟶ each carrier becomes a PHASOR spinning at the LEFTOVER rate  Δfℓ = f_ℓ + δ_ℓ − f_k',
+        '↑ integer ΔfℓT (clean OFDM) ⇒ c = 0;   fractional (Doppler) ⇒ residual arrow = ICI'
+      ];
+      text(ctx, eqCaptions[localIdx] || '',
+           w / 2, headerY + 40, { color: colors.muted, size: 12, align: 'center' });
+
+      // three phasor panels — same picture as the main workbench's Phasor view
+      const rx = 4;                  // middle carrier index in N=8
+      const plotH = 86;
+      const sceneTop = headerY + 58;
+      const plotY = h - TUT_BOTTOM_RESERVED - plotH - 12;
+      const sceneH = Math.max(130, plotY - sceneTop - 8);
+      const panelW = w / 3;
+      const cy = sceneTop + sceneH * 0.36;
+      const r = Math.min(panelW * 0.24, sceneH * 0.23);
+      const showRes = (localIdx >= 2);   // residual arrow appears in step 9
+
+      const entries = [
+        { tx: rx - 1, color: colors.red,    label: 'carrier k − 1' },
+        { tx: rx,     color: colors.accent, label: 'carrier k  (desired)' },
+        { tx: rx + 1, color: colors.gold,   label: 'carrier k + 1' }
+      ];
+      entries.forEach((e, i) => {
+        const cx = panelW * (i + 0.5);
+        tutDrawPhasorPanel(ctx, cx, cy, r, rx, e.tx, e.color, e.label, p, showRes);
+      });
+
+      tutDrawPhasorAveragePlot(
+        ctx,
+        34,
+        plotY,
+        w - 68,
+        plotH,
+        rx,
+        rx + 1,
+        p,
+        colors.gold,
+        'same phasor unwrapped over time for neighbour k+1'
+      );
+
+      // little explanatory caption at the bottom
+      const captions = [
+        'each circle is the path  e^{j 2π (f_ℓ + δ_ℓ − f_k) t}  drawn over t ∈ [0, T]',
+        'open circle = where the phasor lands at t = T.  Same start? Loop closed ⇒ averages to 0',
+        'arrow from origin = c_{ℓ,k} (the average).  Non-zero arrows = the ICI you see in the matrix view'
+      ];
+      text(ctx, captions[localIdx] || '', w / 2, h - TUT_BOTTOM_RESERVED - 4,
+           { align: 'center', size: 12, color: colors.muted });
+    }
+
+    /* ----- per-step scene helpers (each starts from a freshly cleared canvas) ----- */
+    const TONE_PALETTE = ['#0f695e', '#c08a2d', '#2d6cdf', '#a43b36', '#7a4baf', '#0a8a90', '#bb7600', '#4f5b94'];
+    const TUT_TOP_RESERVED = 82;
+    const TUT_BOTTOM_RESERVED = 52;
+
+    function tutLayout(w, N) {
+      const cellW = 36, gap = 6;
+      const rowW = N * (cellW + gap) - gap;
+      const cx = w * 0.5;
+      const x0 = Math.max(110, cx - rowW / 2);
+      return { cellW, gap, rowW, x0 };
+    }
+
+    function tutScene_bits(ctx, w, h, N, bits) {
+      const { x0 } = tutLayout(w, N);
+      const y = TUT_TOP_RESERVED + 10;
+      tutDrawBitsRow(ctx, bits, N, x0, y, 'bits b_k');
+      text(ctx, `N = ${N} subcarriers · so ${N} bits per OFDM symbol`,
+           w / 2, y + 72, { align: 'center', color: colors.ink, size: 14, weight: 650 });
+      text(ctx, '↓  next: each bit becomes a ± symbol',
+           w / 2, h - TUT_BOTTOM_RESERVED - 6, { align: 'center', color: colors.muted, size: 12 });
+    }
+
+    function tutScene_bpsk(ctx, w, h, N, bits, syms) {
+      const { cellW, gap, x0 } = tutLayout(w, N);
+      const row1y = TUT_TOP_RESERVED + 4;
+      tutDrawBitsRow(ctx, bits, N, x0, row1y, 'bits b_k');
+      const row2y = row1y + 60;
+      tutDrawSymRow(ctx, syms, N, x0, row2y, 'BPSK d_k');
+      for (let i = 0; i < N; i++) {
+        const sx = x0 + i * (cellW + gap) + cellW / 2;
+        arrow(ctx, sx, row1y + 26 + 4, sx, row2y - 2, colors.muted, 1);
+      }
+      text(ctx, 'mapping rule:  0 → −1   ·   1 → +1',
+           w / 2, row2y + 78, { align: 'center', color: colors.ink, size: 14, weight: 650 });
+    }
+
+    function tutScene_cosines(ctx, w, h, N, bits, syms) {
+      const { x0 } = tutLayout(w, N);
+      const tonesY = TUT_TOP_RESERVED + 2;
+      const tonesPanelH = h - tonesY - TUT_BOTTOM_RESERVED - 28;
+      const tonePerH = tonesPanelH / N;
+      for (let k = 0; k < N; k++) {
+        const ty = tonesY + k * tonePerH;
+        const cy = ty + tonePerH / 2;
+        const col = TONE_PALETTE[k % TONE_PALETTE.length];
+        ctx.fillStyle = '#fbf6e9';
+        ctx.strokeStyle = colors.line;
+        ctx.fillRect(x0 - 100, ty + 4, 92, tonePerH - 8);
+        ctx.strokeRect(x0 - 100, ty + 4, 92, tonePerH - 8);
+        text(ctx, `tone k = ${k}`, x0 - 100 + 46, ty + 20, { align: 'center', size: 11.5, color: col, weight: 700 });
+        text(ctx, `freq = ${k}/T`, x0 - 100 + 46, ty + 35, { align: 'center', size: 11, color: colors.muted });
+        text(ctx, `d_k = ${syms[k].re > 0 ? '+1' : '−1'}`,
+             x0 - 100 + 46, ty + 50, { align: 'center', size: 11.5, color: colors.ink, weight: 700 });
+        ctx.save();
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        const left = x0, right = w - 24;
+        const span = right - left;
+        const STEPS = 240;
+        const amp = (tonePerH - 18) * 0.42;
+        for (let s = 0; s <= STEPS; s++) {
+          const t = s / STEPS;
+          const val = Math.cos(TAU * k * t) * syms[k].re;
+          const px = left + t * span;
+          const py = cy - val * amp;
+          if (s === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.restore();
+        line(ctx, x0, cy, w - 24, cy, 'rgba(95,103,95,0.35)', 0.6);
+      }
+      text(ctx, 'time  →  one OFDM symbol period T',
+           (x0 + w - 24) / 2, tonesY + tonesPanelH + 14,
+           { align: 'center', color: colors.muted, size: 11 });
+      text(ctx, 'each row = one carrier · its symbol d_k just flips the sine wave',
+           w / 2, h - TUT_BOTTOM_RESERVED - 4, { align: 'center', color: colors.ink, size: 12.5, weight: 650 });
+    }
+
+    function tutDrawTurnCounter(ctx, cx, y, k, t, color) {
+      if (k === 0) {
+        text(ctx, '0 turns: DC carrier stays still', cx, y, {
+          align: 'center', size: 10.5, color: colors.muted
+        });
+        return;
+      }
+      const totalW = Math.min(86, Math.max(34, k * 11));
+      const gap = 3;
+      const boxW = Math.max(6, (totalW - gap * (k - 1)) / k);
+      const x0 = cx - totalW / 2;
+      const completed = Math.floor(k * t + 1e-9);
+      const partial = k * t - completed;
+      for (let lap = 0; lap < k; lap++) {
+        const x = x0 + lap * (boxW + gap);
+        ctx.fillStyle = '#fffefa';
+        ctx.strokeStyle = colors.line;
+        ctx.lineWidth = 1;
+        ctx.fillRect(x, y - 9, boxW, 8);
+        ctx.strokeRect(x, y - 9, boxW, 8);
+        const fill = lap < completed ? 1 : (lap === completed ? partial : 0);
+        if (fill > 0) {
+          ctx.fillStyle = color;
+          ctx.fillRect(x + 1, y - 8, Math.max(1, (boxW - 2) * Math.min(1, fill)), 6);
+        }
+      }
+      text(ctx, `${Math.min(completed, k)} / ${k} full turns completed`, cx, y + 9, {
+        align: 'center', size: 10.5, color: colors.muted
+      });
+    }
+
+    /* NEW · animated dials: each carrier k spins k full turns in one symbol */
+    function tutDrawSpinClocks(ctx, w, h, N, t) {
+      const cols = 4;
+      const rows = Math.ceil(N / cols);
+      const padTop = TUT_TOP_RESERVED + 34;
+      const padBot = TUT_BOTTOM_RESERVED + 110;
+      const cellW = w / cols;
+      const cellH = (h - padTop - padBot) / rows;
+      const r = Math.min(cellW, cellH) * 0.24;
+
+      // Time-progress bar across the top
+      const barX = 24, barY = TUT_TOP_RESERVED + 4, barW = w - 48, barH = 8;
+      ctx.fillStyle = colors.panelSoft;
+      ctx.strokeStyle = colors.line;
+      ctx.fillRect(barX, barY, barW, barH);
+      ctx.strokeRect(barX, barY, barW, barH);
+      ctx.fillStyle = colors.accent;
+      ctx.fillRect(barX, barY, barW * t, barH);
+      text(ctx, `t / T  =  ${t.toFixed(2)}`,
+           barX + barW + 4, barY + 14, { color: colors.ink, size: 12, weight: 700, align: 'left' });
+      text(ctx, '0', barX, barY + 26, { color: colors.muted, size: 10 });
+      text(ctx, 'T', barX + barW - 4, barY + 26, { color: colors.muted, size: 10, align: 'right' });
+
+      for (let k = 0; k < N; k++) {
+        const ci = k % cols;
+        const ri = Math.floor(k / cols);
+        const cx = ci * cellW + cellW / 2;
+        const cy = padTop + ri * cellH + cellH / 2;
+        const col = TONE_PALETTE[k % TONE_PALETTE.length];
+
+        // dashed unit circle and axes
+        line(ctx, cx - r - 10, cy, cx + r + 10, cy, colors.muted, 1);
+        line(ctx, cx, cy - r - 10, cx, cy + r + 10, colors.muted, 1);
+        ctx.save();
+        ctx.strokeStyle = colors.line;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, TAU);
+        ctx.stroke();
+        ctx.restore();
+
+        // fixed start mark at t = 0/T
+        ctx.fillStyle = colors.ink;
+        ctx.beginPath();
+        ctx.arc(cx + r, cy, 3.2, 0, TAU);
+        ctx.fill();
+        text(ctx, 'start', cx + r + 8, cy + 4, { color: colors.muted, size: 9.5 });
+
+        // swept trail up to current time t (angle = 2π k t)
+        const ang = TAU * k * t;
+        if (k > 0) {
+          ctx.save();
+          ctx.strokeStyle = col;
+          ctx.lineWidth = 2.4;
+          ctx.beginPath();
+          ctx.arc(cx, cy, r, 0, -ang, true); // canvas y is flipped; CCW = positive math angle
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // moving hand
+        const hx = cx + r * Math.cos(ang);
+        const hy = cy - r * Math.sin(ang);
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy); ctx.lineTo(hx, hy);
+        ctx.stroke();
+        ctx.fillStyle = col;
+        ctx.beginPath(); ctx.arc(hx, hy, 5, 0, TAU); ctx.fill();
+        // origin dot
+        ctx.beginPath(); ctx.arc(cx, cy, 2.5, 0, TAU); ctx.fill();
+
+        // label below
+        const labY = cy + r + 22;
+        text(ctx, `k = ${k}`, cx, labY, { align: 'center', size: 13, weight: 750, color: col });
+        const turns = (k * t).toFixed(2);
+        text(ctx, `${turns} of ${k} turns`, cx, labY + 16, { align: 'center', size: 11, color: colors.muted });
+        tutDrawTurnCounter(ctx, cx, labY + 33, k, t, col);
+      }
+
+      // footer explanation
+      text(ctx, 'higher k = faster spin · all hands return to the start exactly when t = T',
+           w / 2, h - TUT_BOTTOM_RESERVED - 22, { align: 'center', size: 13, weight: 650, color: colors.ink });
+      text(ctx, 'that synchronisation is OFDM’s orthogonality — what makes the FFT able to split them apart',
+           w / 2, h - TUT_BOTTOM_RESERVED - 4, { align: 'center', size: 12, color: colors.muted });
+    }
+
+    function tutScene_sum(ctx, w, h, N, bits, syms) {
+      const { x0 } = tutLayout(w, N);
+      const SAMPLES = 256;
+      const td = tutTimeDomain(syms, SAMPLES);
+
+      // top: still show the BPSK symbol row for context
+      tutDrawBitsRow(ctx, bits, N, x0, TUT_TOP_RESERVED + 4, 'bits');
+      tutDrawSymRow(ctx, syms, N, x0, TUT_TOP_RESERVED + 40, 'd_k');
+
+      // s(t) panel taking the rest of the canvas
+      const sumY = TUT_TOP_RESERVED + 92;
+      const sumH = h - sumY - TUT_BOTTOM_RESERVED - 22;
+      ctx.fillStyle = '#f8f5ee';
+      ctx.strokeStyle = colors.line;
+      ctx.fillRect(x0 - 100, sumY, w - 24 - (x0 - 100), sumH);
+      ctx.strokeRect(x0 - 100, sumY, w - 24 - (x0 - 100), sumH);
+      text(ctx, 'transmitted s(t)', x0 - 100 + 46, sumY + sumH / 2 + 4,
+           { align: 'center', size: 12, weight: 700, color: colors.accent });
+
+      const sy0 = sumY + sumH / 2;
+      line(ctx, x0, sy0, w - 24, sy0, 'rgba(95,103,95,0.4)', 0.7);
+      let maxAbs = 1e-6;
+      for (let n = 0; n < SAMPLES; n++) maxAbs = Math.max(maxAbs, Math.abs(td[n].re));
+      const amp = (sumH / 2 - 8) / Math.max(1.0, maxAbs);
+      ctx.save();
+      ctx.strokeStyle = colors.ink;
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      const left = x0, right = w - 24;
+      const span = right - left;
+      for (let n = 0; n < SAMPLES; n++) {
+        const tx = n / SAMPLES;
+        const px = left + tx * span;
+        const py = sy0 - td[n].re * amp;
+        if (n === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      ctx.restore();
+
+      text(ctx, 'sum of N tones = one OFDM symbol — this is what the transmitter actually sends',
+           w / 2, h - TUT_BOTTOM_RESERVED - 4, { align: 'center', color: colors.ink, size: 12.5, weight: 650 });
+    }
+
+    function tutScene_fft(ctx, w, h, N, bits, syms) {
+      const { x0 } = tutLayout(w, N);
+      const SAMPLES = 256;
+      const td = tutTimeDomain(syms, SAMPLES);
+      const X = tutFFT(td);
+
+      // top: tiny s(t) preview
+      const sumY = TUT_TOP_RESERVED + 2, sumH = 68;
+      ctx.fillStyle = '#f8f5ee';
+      ctx.strokeStyle = colors.line;
+      ctx.fillRect(x0 - 100, sumY, w - 24 - (x0 - 100), sumH);
+      ctx.strokeRect(x0 - 100, sumY, w - 24 - (x0 - 100), sumH);
+      text(ctx, 's(t)', x0 - 100 + 46, sumY + sumH / 2 + 4, { align: 'center', size: 12, weight: 700, color: colors.accent });
+      const sy0 = sumY + sumH / 2;
+      line(ctx, x0, sy0, w - 24, sy0, 'rgba(95,103,95,0.4)', 0.7);
+      let maxAbs = 1e-6;
+      for (let n = 0; n < SAMPLES; n++) maxAbs = Math.max(maxAbs, Math.abs(td[n].re));
+      const amp = (sumH / 2 - 8) / Math.max(1.0, maxAbs);
+      ctx.save(); ctx.strokeStyle = colors.ink; ctx.lineWidth = 1.5; ctx.beginPath();
+      const left = x0, right = w - 24;
+      const span = right - left;
+      for (let n = 0; n < SAMPLES; n++) {
+        const tt = n / SAMPLES;
+        const px = left + tt * span;
+        const py = sy0 - td[n].re * amp;
+        if (n === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.stroke(); ctx.restore();
+
+      // arrow s(t) → FFT
+      const fftY = sumY + sumH + 20;
+      const fftH = h - fftY - TUT_BOTTOM_RESERVED - 22;
+      arrow(ctx, w / 2, sumY + sumH + 2, w / 2, fftY - 2, colors.accent, 2);
+      text(ctx, 'FFT', w / 2 + 12, fftY - 8, { color: colors.accent, size: 12, weight: 700 });
+
+      // FFT panel
+      ctx.fillStyle = '#f0f4ec';
+      ctx.strokeStyle = colors.line;
+      ctx.fillRect(x0 - 100, fftY, w - 24 - (x0 - 100), fftH);
+      ctx.strokeRect(x0 - 100, fftY, w - 24 - (x0 - 100), fftH);
+      text(ctx, '|y_k|', x0 - 100 + 46, fftY + fftH / 2 + 4, { align: 'center', size: 12, weight: 700, color: colors.accent });
+
+      const stemPanelW = w - 24 - x0;
+      const stemBaseY = fftY + fftH - 18;
+      let maxX = 1e-6;
+      for (let k = 0; k < N; k++) maxX = Math.max(maxX, absC(X[k]));
+      for (let k = 0; k < N; k++) {
+        const px = x0 + (k + 0.5) * (stemPanelW / N);
+        const v = absC(X[k]) / maxX;
+        const py = stemBaseY - v * (fftH - 32);
+        const col = TONE_PALETTE[k % TONE_PALETTE.length];
+        ctx.strokeStyle = col; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(px, stemBaseY); ctx.lineTo(px, py); ctx.stroke();
+        ctx.fillStyle = col;
+        ctx.beginPath(); ctx.arc(px, py, 4, 0, TAU); ctx.fill();
+        text(ctx, `k=${k}`, px, stemBaseY + 14, { align: 'center', size: 11, color: colors.muted });
+        text(ctx, X[k].re > 0 ? '+' : '−', px, py - 8,
+             { align: 'center', size: 13, weight: 750, color: X[k].re > 0 ? colors.accent : colors.red });
+      }
+      line(ctx, x0, stemBaseY, w - 24, stemBaseY, 'rgba(95,103,95,0.55)', 0.8);
+
+      text(ctx, 'FFT recovers each symbol on its own bin — orthogonality at work',
+           w / 2, h - TUT_BOTTOM_RESERVED - 4, { align: 'center', color: colors.ink, size: 12.5, weight: 650 });
+    }
+
+    function tutScene_demap(ctx, w, h, N, bits, syms) {
+      const { x0 } = tutLayout(w, N);
+      const SAMPLES = 256;
+      const td = tutTimeDomain(syms, SAMPLES);
+      const X = tutFFT(td);
+      const recovered = X.map(z => (z.re > 0 ? 1 : 0));
+      const okAll = recovered.every((b, i) => b === bits[i]);
+
+      // Top: original bits row
+      tutDrawBitsRow(ctx, bits, N, x0, TUT_TOP_RESERVED + 4, 'transmitted b_k');
+
+      // Middle: FFT stems
+      const fftY = TUT_TOP_RESERVED + 64;
+      const fftH = h - fftY - TUT_BOTTOM_RESERVED - 76;
+      ctx.fillStyle = '#f0f4ec';
+      ctx.strokeStyle = colors.line;
+      ctx.fillRect(x0 - 100, fftY, w - 24 - (x0 - 100), fftH);
+      ctx.strokeRect(x0 - 100, fftY, w - 24 - (x0 - 100), fftH);
+      text(ctx, 'FFT |y_k|', x0 - 100 + 46, fftY + fftH / 2 + 4,
+           { align: 'center', size: 12, weight: 700, color: colors.accent });
+      const stemPanelW = w - 24 - x0;
+      const stemBaseY = fftY + fftH - 18;
+      let maxX = 1e-6;
+      for (let k = 0; k < N; k++) maxX = Math.max(maxX, absC(X[k]));
+      for (let k = 0; k < N; k++) {
+        const px = x0 + (k + 0.5) * (stemPanelW / N);
+        const v = absC(X[k]) / maxX;
+        const py = stemBaseY - v * (fftH - 32);
+        const col = TONE_PALETTE[k % TONE_PALETTE.length];
+        ctx.strokeStyle = col; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(px, stemBaseY); ctx.lineTo(px, py); ctx.stroke();
+        ctx.fillStyle = col;
+        ctx.beginPath(); ctx.arc(px, py, 4, 0, TAU); ctx.fill();
+        text(ctx, X[k].re > 0 ? '+' : '−', px, py - 8,
+             { align: 'center', size: 13, weight: 750, color: X[k].re > 0 ? colors.accent : colors.red });
+      }
+      line(ctx, x0, stemBaseY, w - 24, stemBaseY, 'rgba(95,103,95,0.55)', 0.8);
+
+      // Bottom: recovered bits row
+      const recY = fftY + fftH + 26;
+      ctx.fillStyle = '#fffdf4';
+      ctx.strokeStyle = okAll ? colors.accent : colors.red;
+      ctx.lineWidth = 1.5;
+      ctx.fillRect(x0 - 100, recY - 16, w - 24 - (x0 - 100), 28);
+      ctx.strokeRect(x0 - 100, recY - 16, w - 24 - (x0 - 100), 28);
+      text(ctx, 'recovered b̂_k', x0 - 100 + 46, recY + 1,
+           { align: 'center', size: 11.5, color: okAll ? colors.accent : colors.red, weight: 700 });
+      for (let k = 0; k < N; k++) {
+        const px = x0 + (k + 0.5) * (stemPanelW / N);
+        text(ctx, String(recovered[k]), px, recY + 3,
+             { align: 'center', size: 14, weight: 750,
+               color: recovered[k] === bits[k] ? colors.accent : colors.red });
+      }
+      text(ctx, okAll ? '✓ recovered bits match transmitted bits — OFDM works (clean channel).'
+                       : '✘ some bits flipped — channel too noisy.',
+           w / 2, h - TUT_BOTTOM_RESERVED - 4, { align: 'center', color: okAll ? colors.accent : colors.red,
+                            size: 12.5, weight: 700 });
+    }
+
+    /* ----- main dispatcher: every step paints from a blank canvas ----- */
+    function tutStepRender() {
+      const { ctx, w, h } = tutPrepare();
+      ctx.fillStyle = colors.panel;
+      ctx.fillRect(0, 0, w, h);
+
+      const N = tut.N;
+      const bits = tut.bits.slice(0, N);
+      const syms = tutSymbolsFromBits(bits, N);
+
+      const stepObj = currentTutSteps()[tut.step];
+      const kind = stepObj && stepObj.kind ? stepObj.kind : 'bits';
+
+      // start / stop the spin-clocks animation depending on the step
+      tutMaybeAnimate(kind);
+
+      switch (kind) {
+        case 'bits':         return tutScene_bits(ctx, w, h, N, bits);
+        case 'bpsk':         return tutScene_bpsk(ctx, w, h, N, bits, syms);
+        case 'cosines':      return tutScene_cosines(ctx, w, h, N, bits, syms);
+        case 'spin-clocks':  return tutDrawSpinClocks(ctx, w, h, N, tutAnim.t);
+        case 'sum':          return tutScene_sum(ctx, w, h, N, bits, syms);
+        case 'fft':          return tutScene_fft(ctx, w, h, N, bits, syms);
+        case 'demap':        return tutScene_demap(ctx, w, h, N, bits, syms);
+        case 'phasor-derive-formula':
+        case 'phasor-derive-rotation':
+        case 'phasor-derive-loop':
+          return tutDrawPhasorDerivation(ctx, w, h, kind);
+        default:             return tutScene_bits(ctx, w, h, N, bits);
+      }
+    }
+
+    /* ----- spin-clocks animation: a small dedicated rAF loop ----- */
+    const tutAnim = { t: 0, raf: 0, last: 0 };
+    function tutMaybeAnimate(kind) {
+      const wantAnim = (kind === 'spin-clocks') && els.tutOverlay.classList.contains('show');
+      if (wantAnim && !tutAnim.raf) {
+        tutAnim.last = 0;
+        tutAnim.raf = requestAnimationFrame(tutAnimTick);
+      } else if (!wantAnim && tutAnim.raf) {
+        cancelAnimationFrame(tutAnim.raf);
+        tutAnim.raf = 0;
+      }
+    }
+    function tutAnimTick(ts) {
+      const stepObj = currentTutSteps()[tut.step];
+      const stillOn = stepObj && stepObj.kind === 'spin-clocks' && els.tutOverlay.classList.contains('show');
+      if (!stillOn) {
+        tutAnim.raf = 0;
+        return;
+      }
+      if (!tutAnim.last) tutAnim.last = ts;
+      const dt = Math.min(0.05, (ts - tutAnim.last) / 1000);
+      tutAnim.last = ts;
+      tutAnim.t = (tutAnim.t + dt * 0.28) % 1;   // ~3.5 s per OFDM symbol
+      const { ctx, w, h } = tutPrepare();
+      ctx.fillStyle = colors.panel; ctx.fillRect(0, 0, w, h);
+      tutDrawSpinClocks(ctx, w, h, tut.N, tutAnim.t);
+      tutAnim.raf = requestAnimationFrame(tutAnimTick);
+    }
+
+    function tutShow() {
+      tut.activePreset = els.presetSelect.value;
+      els.tutOverlay.classList.add('show');
+      tut.step = 0;
+      tutRefresh();
+    }
+    function tutHide() {
+      els.tutOverlay.classList.remove('show');
+      if (tutAnim.raf) { cancelAnimationFrame(tutAnim.raf); tutAnim.raf = 0; }
+    }
+    /* =========================================================
+       LaTeX overlays sit on top of the tutorial canvas.
+       Each scene declares one or more equation cards; they are
+       rebuilt only when the step changes (cheap) so the rAF-
+       driven canvas can keep repainting without touching them.
+       ========================================================= */
+    function tutClearOverlays() {
+      if (els.tutOverlays) els.tutOverlays.innerHTML = '';
+    }
+    function tutPlaceEq(latex, position, opts) {
+      opts = opts || {};
+      const el = document.createElement('div');
+      el.className = 'eq-card ' + (position || 'eq-top') + (opts.subtle ? ' subtle' : opts.banner ? ' banner' : '');
+      el.innerHTML = tex(latex, { display: !!opts.display });
+      els.tutOverlays.appendChild(el);
+      renderMath(el);
+    }
+    function tutSetSceneOverlays(kind) {
+      tutClearOverlays();
+      switch (kind) {
+        case 'bits':
+          tutPlaceEq('b_k \\in \\{0,\\, 1\\}', 'eq-top', { banner: true });
+          break;
+        case 'bpsk':
+          tutPlaceEq('0 \\rightarrow -1,\\qquad 1 \\rightarrow +1', 'eq-top', { banner: true });
+          tutPlaceEq('d_k = 2 b_k - 1', 'eq-bottom', { subtle: true });
+          break;
+        case 'cosines':
+          tutPlaceEq('d_k\\, e^{\\,j\\, 2\\pi k t / T}', 'eq-top', { banner: true });
+          tutPlaceEq('\\text{carrier } k \\;\\Leftrightarrow\\; \\text{frequency } k / T', 'eq-bottom', { subtle: true });
+          break;
+        case 'spin-clocks':
+          tutPlaceEq('e^{\\,j\\, 2\\pi k t / T}\\quad\\Rightarrow\\quad k\\ \\text{full turns in}\\ t \\in [0,T]',
+                     'eq-top', { banner: true });
+          tutPlaceEq('\\text{higher }k\\ \\Rightarrow\\ \\text{faster spin}', 'eq-bottom', { subtle: true });
+          break;
+        case 'sum':
+          tutPlaceEq('s(t) \\;=\\; \\dfrac{1}{N}\\, \\displaystyle\\sum_{k=0}^{N-1}\\, d_k\\, e^{\\,j\\, 2\\pi k t / T}',
+                     'eq-top', { banner: true });
+          break;
+        case 'fft':
+          tutPlaceEq('y_k \\;=\\; \\displaystyle\\sum_{n=0}^{N-1}\\, s[n]\\, e^{-j\\, 2\\pi k n / N}',
+                     'eq-top', { banner: true });
+          tutPlaceEq('y_k \\approx d_k\\quad\\text{(clean OFDM)}', 'eq-bottom', { subtle: true });
+          break;
+        case 'demap':
+          tutPlaceEq('\\hat{b}_k \\;=\\; \\operatorname{sign}\\!\\bigl(\\mathrm{Re}\\{y_k\\}\\bigr)',
+                     'eq-top', { banner: true });
+          break;
+        case 'phasor-derive-formula':
+          tutPlaceEq('y_k \\;=\\; \\dfrac{1}{T}\\int_0^{T}\\! r(t)\\, e^{-j\\, 2\\pi f_k t}\\, dt',
+                     'eq-top', { banner: true });
+          break;
+        case 'phasor-derive-rotation':
+          tutPlaceEq('y_k \\;=\\; \\displaystyle\\sum_{\\ell}\\, d_\\ell \\int_0^{T}\\! e^{\\,j\\, 2\\pi (f_\\ell + \\delta_\\ell - f_k)\\, t}\\, dt',
+                     'eq-top', { banner: true });
+          tutPlaceEq('\\Delta f_\\ell \\;=\\; f_\\ell + \\delta_\\ell - f_k\\ \\text{(leftover spin)}',
+                     'eq-bottom', { subtle: true });
+          break;
+        case 'phasor-derive-loop':
+          tutPlaceEq('c_{\\ell,k} \\;=\\; \\dfrac{1}{T}\\int_0^{T}\\! e^{\\,j\\, 2\\pi (f_\\ell + \\delta_\\ell - f_k)\\, t}\\, dt \\;=\\; e^{\\,j\\pi\\Delta f_\\ell T}\\,\\mathrm{sinc}(\\pi\\Delta f_\\ell T)',
+                     'eq-top', { banner: true });
+          tutPlaceEq('\\Delta f_\\ell T \\in \\mathbb{Z}\\ \\Rightarrow\\ c_{\\ell,k} = 0\\quad\\text{(clean)}',
+                     'eq-bottom', { subtle: true });
+          break;
+        default:
+          break;
+      }
+    }
+
+    function tutRefresh() {
+      const scenario = currentTutScenario();
+      const steps = currentTutSteps();
+      tut.step = Math.max(0, Math.min(tut.step, steps.length - 1));
+      const s = steps[tut.step];
+      els.tutTitle.textContent = `OFDM tutorial — ${scenario.label}`;
+      els.tutCrumb.textContent = `${s.title} · Step ${tut.step + 1} of ${steps.length}`;
+      els.tutNarration.innerHTML = s.narration;
+      renderMath(els.tutNarration);
+      tutSetSceneOverlays(s.kind || 'bits');
+      els.tutPrev.disabled = (tut.step === 0);
+      els.tutNext.textContent = (tut.step === steps.length - 1) ? 'Close ✓' : 'Next ›';
+      // dots
+      els.tutDots.innerHTML = '';
+      for (let i = 0; i < steps.length; i++) {
+        const d = document.createElement('div');
+        d.className = 'tut-dot' + (i === tut.step ? ' on' : '');
+        els.tutDots.appendChild(d);
+      }
+      // give layout a tick to settle before drawing into the canvas
+      requestAnimationFrame(tutStepRender);
+    }
+
+    els.tutBtn.addEventListener('click', tutShow);
+    els.tutClose.addEventListener('click', tutHide);
+    els.tutPrev.addEventListener('click', () => {
+      if (tut.step > 0) { tut.step -= 1; tutRefresh(); }
+    });
+    els.tutNext.addEventListener('click', () => {
+      const steps = currentTutSteps();
+      if (tut.step >= steps.length - 1) tutHide();
+      else { tut.step += 1; tutRefresh(); }
+    });
+    // tutorial N is fixed at 8
+    els.tutShuffle.addEventListener('click', () => {
+      tut.seed += 1;
+      const rand = lcg(tut.seed);
+      tut.bits = Array.from({ length: 8 }, () => (rand() > 0.5 ? 1 : 0));
+      tutRefresh();
+    });
+    els.tutOverlay.addEventListener('click', ev => {
+      if (ev.target === els.tutOverlay) tutHide();
+    });
+    document.addEventListener('keydown', ev => {
+      if (!els.tutOverlay.classList.contains('show')) return;
+      if (ev.key === 'ArrowRight') els.tutNext.click();
+      else if (ev.key === 'ArrowLeft') els.tutPrev.click();
+      else if (ev.key === 'Escape') tutHide();
+    });
+    window.addEventListener('resize', () => {
+      if (els.tutOverlay.classList.contains('show')) tutStepRender();
+    });
+
+    applyPreset('wideband');
+  </script>
+</body>
+</html>
